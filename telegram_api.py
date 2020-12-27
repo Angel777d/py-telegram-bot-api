@@ -384,8 +384,16 @@ class API:
 		return [Update(**d) for d in update_list]
 
 	# MarkdownV2, HTML, Markdown
-	def send_message(self, chat_id: int, text: str, parse_mode: str = None, disable_web_page_preview: bool = None,
-					 disable_notification: bool = None, reply_to_message_id: int = None, reply_markup=None):
+	def send_message(
+			self,
+			chat_id: int,
+			text: str,
+			parse_mode: str = None,
+			disable_web_page_preview: bool = None,
+			disable_notification: bool = None,
+			reply_to_message_id: int = None,
+			reply_markup=None
+	):
 		params = {"chat_id": chat_id, "text": text}
 		params.update(make_optional(locals(), (self, chat_id, text)))
 		data = self.__make_request("sendMessage", **params)
