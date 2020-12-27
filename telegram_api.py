@@ -53,38 +53,6 @@ class Contact(DefaultFieldObject):
 	pass
 
 
-class Voice(DefaultFieldObject):
-	pass
-
-
-class VideoNote(DefaultFieldObject):
-	pass
-
-
-class Video(DefaultFieldObject):
-	pass
-
-
-class Sticker(DefaultFieldObject):
-	pass
-
-
-class PhotoSize(DefaultFieldObject):
-	pass
-
-
-class Document(DefaultFieldObject):
-	pass
-
-
-class Audio(DefaultFieldObject):
-	pass
-
-
-class Animation(DefaultFieldObject):
-	pass
-
-
 class PassportData(DefaultFieldObject):
 	pass
 
@@ -144,8 +112,108 @@ class MessageEntityTypes:
 	TEXT_MENTION = "text_mention"  # “text_mention” (for users without usernames)
 
 
-class MessageEntity(DefaultFieldObject):
+class MaskPosition(DefaultFieldObject):
+	def __init__(self, **kwargs):
+		self.point: str = ""
+		self.x_shift: float = 0
+		self.y_shift: float = 0
+		self.scale: float = 0
+		DefaultFieldObject.__init__(self, **kwargs)
 
+
+class FileBase:
+	def __init__(self):
+		self.file_id: str = ""  # Identifier for this file, which can be used to download or reuse the file
+		self.file_unique_id: str = ""  # Unique	identifier for this file, which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
+		self.file_size: int = 0  # Optional. File size
+
+
+class Bounds:
+	def __init__(self):
+		self.width: int = 0  # Photo width
+		self.height: int = 0  # Photo height
+
+
+class PhotoSize(FileBase, Bounds, DefaultFieldObject):
+	def __init__(self, **kwargs):
+		FileBase.__init__(self)
+		Bounds.__init__(self)
+		DefaultFieldObject.__init__(self, **kwargs)
+
+
+class FileDescription:
+	def __init__(self):
+		self.file_name: str = ""
+		self.mime_type: str = ""
+		self.thumb: Optional[PhotoSize] = None
+
+
+class Animation(FileBase, FileDescription, Bounds, DefaultFieldObject):
+	def __init__(self, **kwargs):
+		FileBase.__init__(self)
+		FileDescription.__init__(self)
+		Bounds.__init__(self)
+		self.duration: int = 0
+		DefaultFieldObject.__init__(self, **kwargs)
+
+
+class Audio(FileBase, FileDescription, DefaultFieldObject):
+	def __init__(self, **kwargs):
+		FileBase.__init__(self)
+		FileDescription.__init__(self)
+		self.duration: int = 0
+		self.performer: str = ""
+		self.title: str = ""
+		DefaultFieldObject.__init__(self, **kwargs)
+
+
+class Document(FileBase, FileDescription, DefaultFieldObject):
+	def __init__(self, **kwargs):
+		FileBase.__init__(self)
+		FileDescription.__init__(self)
+		DefaultFieldObject.__init__(self, **kwargs)
+
+
+class Video(FileBase, FileDescription, Bounds, DefaultFieldObject):
+	def __init__(self, **kwargs):
+		FileBase.__init__(self)
+		FileDescription.__init__(self)
+		Bounds.__init__(self)
+		self.duration: int = 0
+		DefaultFieldObject.__init__(self, **kwargs)
+
+
+class VideoNote(FileBase, DefaultFieldObject):
+	def __init__(self, **kwargs):
+		FileBase.__init__(self)
+		self.length: int = 0  # Video width and height (diameter of the video message) as defined by sender
+		self.duration: int = 0  # Duration of the video in seconds as defined by sender
+		self.thumb: Optional[PhotoSize] = None
+		DefaultFieldObject.__init__(self, **kwargs)
+
+
+class Voice(FileBase, DefaultFieldObject):
+	def __init__(self, **kwargs):
+		FileBase.__init__(self)
+		self.duration: int = 0  # Duration of the audio in seconds as defined by sender
+		self.mime_type: str = ""
+		DefaultFieldObject.__init__(self, **kwargs)
+
+
+class Sticker(FileBase, Bounds, DefaultFieldObject):
+	def __init__(self, **kwargs):
+		FileBase.__init__(self)
+		Bounds.__init__(self)
+		self.is_animated: bool = False  # True,	if the sticker is animated
+		self.thumb: Optional[PhotoSize] = None  # Optional.Sticker thumbnail in the.WEBP or.JPG format
+		self.emoji: str = ""  # Optional.Emoji	associated	with the sticker
+		self.set_name: str = ""  # Optional.Name	of	the	sticker	set	to	which the	sticker	belongs
+		self.mask_position: Optional[
+			MaskPosition] = None  # Optional. For mask stickers, the position where	the	mask should	be placed
+		DefaultFieldObject.__init__(self, **kwargs)
+
+
+class MessageEntity(DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.type: str = ""
 		self.offset: int = 0
@@ -289,9 +357,21 @@ class Update(DefaultFieldObject):
 FIELD_MAP = {
 	"message": Message,
 	"entities": MessageEntity,
+	"caption_entities": MessageEntity,
 	"reply_to_message": Message,
 	"chat": Chat,
 	"from": User,
+	"mask_position": MaskPosition,
+	"thumb": PhotoSize,
+	"anim": Video,
+	"animation": Animation,
+	"audio": Audio,
+	"document": Document,
+	"photo": PhotoSize,
+	"sticker": Sticker,
+	"video": Video,
+	"video_note": VideoNote,
+	"voice": Voice,
 }
 
 
