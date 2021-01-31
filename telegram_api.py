@@ -160,7 +160,7 @@ class _InputBase(_Serializable):
 		if type(self.media) == str:
 			media = self.media
 		elif self.media.type == InputFile.InputType.FILE:
-			media = f'attach://{self.media.value}'
+			media = f'attach://{self.media.file_name}'
 		else:
 			media = self.media.value
 
@@ -705,10 +705,12 @@ class API:
 	@staticmethod
 	def __process_response(resp):
 		if resp.reason != "OK":
-			raise ValueError("unexpected reason")
+			data = resp.read()
+			raise ValueError("unexpected reason", data)
 
 		if resp.getcode() != 200:
-			raise ValueError("unexpected code")
+			data = resp.read()
+			raise ValueError("unexpected code", data)
 
 		data = resp.read()
 		parsed_data = json.loads(data)
@@ -785,10 +787,9 @@ class API:
 			allow_sending_without_reply: bool = None
 	):
 		params = _make_optional(locals(), (self, media))
-		params["media"] = [m.serialize() for m in media]
+		params["media"] = json.dumps([m.serialize() for m in media])
 
 		form = MultiPartForm()
-		form.write_params(params)
 		for m in media:
 			if type(m.media) is str:
 				continue
@@ -796,6 +797,7 @@ class API:
 			if input_file.type == InputFile.InputType.FILE:
 				with open(input_file.value, mode="rb") as f:
 					form.write_file(input_file)
+		form.write_params(params)
 
 		url = self.__get_url("sendMediaGroup")
 		resp = form.make_request(self.__host, url)
