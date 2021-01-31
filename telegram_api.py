@@ -1,15 +1,258 @@
+import binascii
 import http.client
 import json
-from threading import Thread, currentThread
-from time import sleep
-from typing import List, Optional, Callable, Tuple, KeysView
+import mimetypes
+import os
+import stat
+from enum import Enum
+from io import BytesIO
+from typing import List, Optional, Tuple, KeysView
 from urllib.parse import urlencode
 
 
+# https://core.telegram.org/bots/api#messageentity
+class MessageEntityType(Enum):
+	MENTION = "mention"  # “mention” (@username),
+	HASHTAG = "hashtag"  # “hashtag” (#hashtag),
+	CASHTAG = "cashtag"  # “cashtag” ($USD),
+	BOT_COMMAND = "bot_command"  # “bot_command” (/start@jobs_bot),
+	URL = "url"  # “url” (https://telegram.org),
+	EMAIL = "email"  # “email” (do-not-reply@telegram.org),
+	PHONE_NUMBER = "phone_number"  # “phone_number” (+1-212-555-0123),
+	BOLD = "bold"  # “bold” (bold text),
+	ITALIC = "italic"  # “italic” (italic text),
+	UNDERLINE = "underline"  # “underline” (underlined text),
+	STRIKETHROUGH = "strikethrough"  # “strikethrough” (strikethrough text),
+	CODE = "code"  # “code” (monowidth string),
+	PRE = "pre"  # “pre” (monowidth block),
+	TEXT_LINK = "text_link"  # “text_link” (for clickable text URLs),
+	TEXT_MENTION = "text_mention"  # “text_mention” (for users without usernames)
+
+	WRONG = "wrong"
+
+
+# https://core.telegram.org/bots/api#chat
+class ChatType(Enum):
+	PRIVATE = "private"
+	GROUP = "group"
+	SUPERGROUP = "supergroup"
+	CHANNEL = "channel"
+
+	WRONG = "wrong"
+
+
+def _make_optional(params: dict, exclude=()):
+	return {k: v for k, v in params.items() if v is not None and v not in exclude}
+
+
+def _fill_object(target, data):
+	for k, v in data.items():
+		setattr(target, k, __ch_list(target, k, v))
+
+
+def __ch_list(target, k, v):
+	return [__ch_obj(target, k, a) for a in v] if type(v) is list else __ch_obj(target, k, v)
+
+
+def __ch_obj(target, k, v):
+	return target.get_fields_map().get(k, DefaultFieldObject)(**v) if type(v) is dict else target.get_simple_field(k, v)
+
+
+# service class
+class _Serializable:
+	def serialize(self):
+		raise NotImplementedError("serialize method must be implemented")
+
+
+class MultiPartForm:
+	def __init__(self):
+		self.boundary = binascii.hexlify(os.urandom(16)).decode('ascii')
+		self.buff = BytesIO()
+
+	def write_params(self, params):
+		boundary = self.boundary
+		for key, value in params.items():
+			self._write_str('--%s\r\n' % boundary)
+			self._write_str('Content-Disposition: form-data; name="%s"' % key)
+			self._write_str('\r\nContent-Type: text/plain; charset=utf-8')
+			if value is None:
+				value = ""
+			self._write_str('\r\n\r\n' + str(value) + '\r\n')
+
+	def write_file(self, field, file):
+		boundary = self.boundary
+
+		file_size = os.fstat(file.fileno())[stat.ST_SIZE]
+		filename = file.name.split('/')[-1]
+		content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+
+		self._write_str('--%s\r\n' % boundary)
+		self._write_str('Content-Disposition: form-data; name="%s"; filename="%s"\r\n' % (field, filename))
+		self._write_str('Content-Type: %s; charset=utf-8\r\n' % content_type)
+		self._write_str('Content-Length: %s\r\n' % file_size)
+
+		file.seek(0)
+		self.buff.write(b'\r\n')
+		self.buff.write(file.read())
+		self.buff.write(b'\r\n')
+
+	def _write_str(self, value: str):
+		self.buff.write(value.encode('utf-8'))
+
+	def get_data(self):
+		self._write_str('--' + self.boundary + '--\r\n')
+		return self.boundary, self.buff.getvalue()
+
+	def make_request(self, host, url):
+		boundary, buffer = self.get_data()
+		buffer_size = len(buffer)
+
+		conn = http.client.HTTPSConnection(host)
+		conn.connect()
+		conn.putrequest("POST", url)
+		conn.putheader('Connection', 'Keep-Alive')
+		conn.putheader('Cache-Control', 'no-cache')
+		conn.putheader('Accept', 'application/json')
+		conn.putheader('Content-type', f'multipart/form-data; boundary={boundary}')
+		conn.putheader('Content-length', str(buffer_size))
+		conn.endheaders()
+
+		conn.send(buffer)
+
+		return conn.getresponse()
+
+
+# https://core.telegram.org/bots/api#inputfile
+class InputFile(_Serializable):
+	class InputType(Enum):
+		FILE = 0
+		URL = 1
+		TELEGRAM = 2
+
+	def __init__(self, type_: InputType, value: [int, str]) -> None:
+		super().__init__()
+		self.type = type_
+		self.value = value
+
+	def serialize(self):
+		raise NotImplementedError("serialize method must be implemented")
+
+
+# service class
+class _InputBase(_Serializable):
+	def __init__(self, type_: str, media: [str, InputFile]):
+		self.type: str = type_
+		self.media: str = media
+		self.caption: Optional[str] = None
+		self.parse_mode: Optional[str] = None
+		self.caption_entities: Optional[List[MessageEntity]] = None
+
+	def serialize(self):
+		return _make_optional({
+			"type": self.type,
+			"media": self.media,
+			"caption": self.caption,
+			"parse_mode": self.parse_mode,
+			"caption_entities": [m.serialize() for m in self.caption_entities] if self.caption_entities else None,
+		})
+
+
+# service class
+class _InputThumb(_InputBase):
+	def __init__(self, type_: str, media: str):
+		super().__init__(type_, media)
+		self.thumb: Optional[InputFile] = None
+
+	def serialize(self):
+		result = super().serialize()
+		result.update(_make_optional({
+			"thumb": self.thumb.serialize() if self.thumb else None
+		}))
+		return result
+
+
+# https://core.telegram.org/bots/api#inputmediaphoto
+class InputMediaPhoto(_InputBase):
+
+	def __init__(self, media: [str, InputFile]):
+		super().__init__("photo", media)
+
+
+# https://core.telegram.org/bots/api#inputmediavideo
+class InputMediaVideo(_InputThumb):
+	def __init__(self, type_: str, media: str):
+		super().__init__(type_, media)
+		self.width: Optional[int] = None
+		self.height: Optional[int] = None
+		self.duration: Optional[int] = None
+		self.supports_streaming: Optional[bool] = None
+
+	def serialize(self):
+		result = super().serialize()
+		result.update(_make_optional({
+			"width": self.width,
+			"height": self.height,
+			"duration": self.duration,
+			"supports_streaming": self.supports_streaming,
+		}))
+		return result
+
+
+# https://core.telegram.org/bots/api#inputmediaanimation
+class InputMediaAnimation(_InputThumb):
+	def __init__(self, type_: str, media: str):
+		super().__init__(type_, media)
+		self.width: Optional[int] = None
+		self.height: Optional[int] = None
+		self.duration: Optional[int] = None
+
+	def serialize(self):
+		result = super().serialize()
+		result.update(_make_optional({
+			"width": self.width,
+			"height": self.height,
+			"duration": self.duration,
+		}))
+		return result
+
+
+# https://core.telegram.org/bots/api#inputmediaaudio
+class InputMediaAudio(_InputThumb):
+	def __init__(self, type_: str, media: str):
+		super().__init__(type_, media)
+		self.duration: Optional[int] = None
+		self.performer: Optional[str] = None
+		self.title: Optional[str] = None
+
+	def serialize(self):
+		result = super().serialize()
+		result.update(_make_optional({
+			"duration": self.duration,
+			"performer": self.performer,
+			"title": self.title,
+		}))
+		return result
+
+
+# https://core.telegram.org/bots/api#inputmediadocument
+class InputMediaDocument(_InputThumb):
+	def __init__(self, type_: str, media: str):
+		super().__init__(type_, media)
+		self.disable_content_type_detection: Optional[bool] = None
+
+	def serialize(self):
+		result = super().serialize()
+		result.update(_make_optional({
+			"disable_content_type_detection": self.disable_content_type_detection,
+		}))
+		return result
+
+
+# API Classes
 class DefaultFieldObject:
 	def __init__(self, **kwargs):
 		self.__data: dict = kwargs
-		fill_object(self, kwargs)
+		_fill_object(self, kwargs)
 
 	def __repr__(self):
 		return f'[DefaultDataClass] data: {self.__data}'
@@ -19,6 +262,33 @@ class DefaultFieldObject:
 
 	def get_source(self) -> dict:
 		return self.__data
+
+	@staticmethod
+	def get_simple_field(name, value):
+		return value
+
+	@staticmethod
+	def get_fields_map():
+		return {
+			"message": Message,
+			"entities": MessageEntity,
+			"caption_entities": MessageEntity,
+			"reply_to_message": Message,
+			"chat": Chat,
+			"from": User,
+			"user": User,
+			"mask_position": MaskPosition,
+			"thumb": PhotoSize,
+			"anim": Video,
+			"animation": Animation,
+			"audio": Audio,
+			"document": Document,
+			"photo": PhotoSize,
+			"sticker": Sticker,
+			"video": Video,
+			"video_note": VideoNote,
+			"voice": Voice,
+		}.copy()
 
 
 class InlineQuery(DefaultFieldObject):
@@ -91,25 +361,6 @@ class ChatPhoto(DefaultFieldObject):
 
 class InlineKeyboardMarkup(DefaultFieldObject):
 	pass
-
-
-# Type of the entity. Can be
-class MessageEntityTypes:
-	MENTION = "mention"  # “mention” (@username),
-	HASHTAG = "hashtag"  # “hashtag” (#hashtag),
-	CASHTAG = "cashtag"  # “cashtag” ($USD),
-	BOT_COMMAND = "bot_command"  # “bot_command” (/start@jobs_bot),
-	URL = "url"  # “url” (https://telegram.org),
-	EMAIL = "email"  # “email” (do-not-reply@telegram.org),
-	PHONE_NUMBER = "phone_number"  # “phone_number” (+1-212-555-0123),
-	BOLD = "bold"  # “bold” (bold text),
-	ITALIC = "italic"  # “italic” (italic text),
-	UNDERLINE = "underline"  # “underline” (underlined text),
-	STRIKETHROUGH = "strikethrough"  # “strikethrough” (strikethrough text),
-	CODE = "code"  # “code” (monowidth string),
-	PRE = "pre"  # “pre” (monowidth block),
-	TEXT_LINK = "text_link"  # “text_link” (for clickable text URLs),
-	TEXT_MENTION = "text_mention"  # “text_mention” (for users without usernames)
 
 
 class MaskPosition(DefaultFieldObject):
@@ -213,20 +464,7 @@ class Sticker(FileBase, Bounds, DefaultFieldObject):
 		DefaultFieldObject.__init__(self, **kwargs)
 
 
-class MessageEntity(DefaultFieldObject):
-	def __init__(self, **kwargs):
-		self.type: str = ""
-		self.offset: int = 0
-		self.length: int = 0
-
-		self.url: Optional[str] = None
-		self.user: Optional[User] = None
-		self.language: Optional[str] = None
-
-		DefaultFieldObject.__init__(self, **kwargs)
-
-
-class User(DefaultFieldObject):
+class User(DefaultFieldObject, _Serializable):
 	def __init__(self, **kwargs):
 		self.id: int = 0
 		self.is_bot: bool = False
@@ -242,11 +480,50 @@ class User(DefaultFieldObject):
 
 		DefaultFieldObject.__init__(self, **kwargs)
 
+	def serialize(self):
+		return _make_optional({
+			"id": self.id,
+			"is_bot": self.is_bot,
+			"first_name": self.first_name,
+			"last_name": self.last_name,
+			"username": self.username,
+			"language_code": self.language_code,
+			"can_join_groups": self.can_join_groups,
+			"can_read_all_group_messages": self.can_read_all_group_messages,
+			"supports_inline_queries": self.supports_inline_queries,
+		})
+
+
+class ChatMember(DefaultFieldObject):
+	def __init__(self, **kwargs):
+		self.user: User = User()
+		self.status: str = ""
+		self.custom_title: Optional[str] = None
+		self.is_anonymous: Optional[bool] = None
+		self.can_be_edited: Optional[bool] = None
+		self.can_post_messages: Optional[bool] = None
+		self.can_edit_messages: Optional[bool] = None
+		self.can_delete_messages: Optional[bool] = None
+		self.can_restrict_members: Optional[bool] = None
+		self.can_promote_members: Optional[bool] = None
+		self.can_change_info: Optional[bool] = None
+		self.can_invite_users: Optional[bool] = None
+		self.can_pin_messages: Optional[bool] = None
+		self.is_member: Optional[bool] = None
+		self.can_send_messages: Optional[bool] = None
+		self.can_send_media_messages: Optional[bool] = None
+		self.can_send_polls: Optional[bool] = None
+		self.can_send_other_messages: Optional[bool] = None
+		self.can_add_web_page_previews: Optional[bool] = None
+		self.until_date: Optional[int] = None
+
+		DefaultFieldObject.__init__(self, **kwargs)
+
 
 class Chat(DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.id: int = 0
-		self.type: str = ""
+		self.type: ChatType = ChatType.WRONG
 		self.title: Optional[str] = None
 		self.username: Optional[str] = None
 		self.first_name: Optional[str] = None
@@ -261,6 +538,44 @@ class Chat(DefaultFieldObject):
 		self.can_set_sticker_set: Optional[bool] = None
 
 		DefaultFieldObject.__init__(self, **kwargs)
+
+	@staticmethod
+	def get_simple_field(name, value):
+		if name == "type":
+			return ChatType(value)
+		return value
+
+
+class MessageEntity(DefaultFieldObject, _Serializable):
+	def __init__(self, **kwargs):
+		self.type: MessageEntityType = MessageEntityType.WRONG
+		self.offset: int = 0
+		self.length: int = 0
+
+		self.url: Optional[str] = None
+		self.user: Optional[User] = None
+		self.language: Optional[str] = None
+
+		DefaultFieldObject.__init__(self, **kwargs)
+
+	def get_value(self, text: str) -> str:
+		return text[self.offset:self.offset + self.length]
+
+	@staticmethod
+	def get_simple_field(name, value):
+		if name == "type":
+			return MessageEntityType(value)
+		return value
+
+	def serialize(self):
+		return _make_optional({
+			"type": self.type.value,
+			"offset": self.offset,
+			"length": self.length,
+			"url": self.url,
+			"user": self.user.serialize() if self.user else None,
+			"language": self.language,
+		})
 
 
 class Message(DefaultFieldObject):
@@ -280,7 +595,7 @@ class Message(DefaultFieldObject):
 		self.media_group_id: Optional[str] = None
 		self.author_signature: Optional[str] = None
 		self.text: Optional[str] = None
-		self.entities: Optional[List[MessageEntity]] = None
+		self.entities: Optional[List[MessageEntity]] = []
 		self.animation: Optional[Animation] = None
 		self.audio: Optional[Audio] = None
 		self.document: Optional[Document] = None
@@ -318,14 +633,8 @@ class Message(DefaultFieldObject):
 		# we can't use "from" word in code
 		self.from_user: Optional[User] = getattr(self, "from")
 
-	def get_entities_by_type(self, entity_type) -> Tuple[str]:
-		r = []
-		if self.entities:
-			for e in self.entities:
-				if e.type == entity_type:
-					s: str = self.text[e.offset:e.offset + e.length]
-					r.append(s)
-		return tuple(r)
+	def get_entities_by_type(self, entity_type: MessageEntityType) -> Tuple[str]:
+		return tuple(e.get_value(self.text) for e in self.entities if e.type == entity_type)
 
 
 class Update(DefaultFieldObject):
@@ -354,78 +663,7 @@ class Update(DefaultFieldObject):
 		return f'[Update] update_id: {self.update_id}, type: {self.update_types}, value: {self.__data.values()}'
 
 
-FIELD_MAP = {
-	"message": Message,
-	"entities": MessageEntity,
-	"caption_entities": MessageEntity,
-	"reply_to_message": Message,
-	"chat": Chat,
-	"from": User,
-	"mask_position": MaskPosition,
-	"thumb": PhotoSize,
-	"anim": Video,
-	"animation": Animation,
-	"audio": Audio,
-	"document": Document,
-	"photo": PhotoSize,
-	"sticker": Sticker,
-	"video": Video,
-	"video_note": VideoNote,
-	"voice": Voice,
-}
-
-
-def fill_object(target, data):
-	for k, v in data.items():
-		setattr(target, k, ch_list(k, v))
-
-
-def ch_list(k, v):
-	return [ch_obj(k, a) for a in v] if type(v) is list else ch_obj(k, v)
-
-
-def ch_obj(k, v):
-	return FIELD_MAP.get(k, DefaultFieldObject)(**v) if type(v) is dict else v
-
-
-def make_optional(params: dict, exclude):
-	return {k: v for k, v in params.items() if v is not None and v not in exclude}
-
-
-class Pooling:
-	def __init__(self, api, handler: Callable[[Update], None], update_time: float = 5):
-		self.__api: API = api
-		self.handler: Callable[[Update], None] = handler
-		self.__update_time: float = update_time
-		self.__pooling = None
-		self.__lastUpdate: int = 0
-
-	def start(self):
-		if self.__pooling:
-			return
-
-		self.__pooling = Thread(target=self.__request_update)
-		self.__pooling.start()
-		return self
-
-	def stop(self):
-		if not self.__pooling:
-			return
-
-		self.__pooling.running = False
-		self.__pooling = None
-
-	def __request_update(self):
-		while getattr(currentThread(), "running", True):
-			# print("request")
-			updates = self.__api.get_updates(offset=self.__lastUpdate)
-			for update in updates:
-				self.__lastUpdate = update.update_id + 1
-				if self.handler:
-					self.handler(update)
-			sleep(self.__update_time)
-
-
+# API METHODS
 class API:
 	def __init__(self, token: str, host: str = "api.telegram.org"):
 		self.__host = host
@@ -434,9 +672,10 @@ class API:
 	def __get_url(self, api_method) -> str:
 		return f'https://{self.__host}/bot{self.__token}/{api_method}'
 
-	def __make_request(self, api_method, method="POST", **kwargs):
+	def __make_request(self, api_method, method="POST", params=None):
 		url = self.__get_url(api_method)
-		params = urlencode(kwargs)
+		params = urlencode(params)
+
 		headers = {
 			"Content-type": "application/x-www-form-urlencoded",
 			"Accept": "application/json"
@@ -445,8 +684,10 @@ class API:
 		conn = http.client.HTTPSConnection(self.__host)
 		conn.request(method, url, params, headers)
 
-		resp = conn.getresponse()
+		return self.__process_response(conn.getresponse())
 
+	@staticmethod
+	def __process_response(resp):
 		if resp.reason != "OK":
 			raise ValueError("unexpected reason")
 
@@ -457,13 +698,14 @@ class API:
 		parsed_data = json.loads(data)
 		return parsed_data
 
+	# https://core.telegram.org/bots/api#getupdates
 	def get_updates(self, offset=None, limit=None, timeout=None, allowed_updates=None) -> List[Update]:
-		params = make_optional(locals(), (self,))
-		data = self.__make_request("getUpdates", **params)
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("getUpdates", params=params)
 		update_list = data.get("result", None)
 		return [Update(**d) for d in update_list]
 
-	# MarkdownV2, HTML, Markdown
+	# https://core.telegram.org/bots/api#sendmessage
 	def send_message(
 			self,
 			chat_id: int,
@@ -475,6 +717,63 @@ class API:
 			reply_markup=None
 	):
 		params = {"chat_id": chat_id, "text": text}
-		params.update(make_optional(locals(), (self, chat_id, text)))
-		data = self.__make_request("sendMessage", **params)
+		params.update(_make_optional(locals(), (self, chat_id, text)))
+		data = self.__make_request("sendMessage", params=params)
 		return data
+
+	# https://core.telegram.org/bots/api#sendphoto
+	def send_photo(
+			self,
+			chat_id: [int, str],
+			photo: [InputFile, str],
+			caption: str = None,
+			parse_mode: str = None,
+			caption_entities: list = None,
+			disable_notification: bool = None,
+			reply_to_message_id: int = None,
+			allow_sending_without_reply: bool = None,
+			reply_markup=None,
+	):
+		params = {"chat_id": chat_id}
+		params.update(_make_optional(locals(), (self, chat_id, photo, params)))
+
+		if type(photo) is str:
+			params.update({"photo": photo})
+			return self.__make_request("sendPhoto", params=params)
+
+		photo: InputFile = photo
+		if photo.type != InputFile.InputType.FILE:
+			params.update({"photo": photo.value})
+			return self.__make_request("sendPhoto", params=params)
+
+		# Do multipart request in this case
+		form = MultiPartForm()
+		form.write_params(params)
+		with open(photo.value, mode="rb") as f:
+			form.write_file("photo", f)
+
+		url = self.__get_url("sendPhoto")
+		resp = form.make_request(self.__host, url)
+		data = self.__process_response(resp)
+		return Message(**data.get("result", None))
+
+	# https://core.telegram.org/bots/api#getchatadministrators
+	def get_chat_administrators(self, chat_id: [int, str]) -> List[ChatMember]:
+		params = {"chat_id": chat_id}
+		data = self.__make_request("getChatAdministrators", params=params)
+		result_list = data.get("result", None)
+		return [ChatMember(**d) for d in result_list]
+
+	# https://core.telegram.org/bots/api#sendmediagroup
+	def send_media_group(
+			self,
+			chat_id: [int, str],
+			media: List[_InputBase],
+			disable_notification: bool = None,
+			reply_to_message_id: int = None,
+			allow_sending_without_reply: bool = None
+	):
+		media = f'[]'
+		params = {"chat_id": chat_id, "media": media}
+
+		data = self.__make_request("sendMediaGroup", params=params)
