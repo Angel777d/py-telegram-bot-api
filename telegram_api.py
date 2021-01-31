@@ -64,6 +64,25 @@ class _Serializable:
 		raise NotImplementedError("serialize method must be implemented")
 
 
+# https://core.telegram.org/bots/api#inputfile
+class InputFile(_Serializable):
+	class InputType(Enum):
+		FILE = 0
+		URL = 1
+		TELEGRAM = 2
+
+	def __init__(self, type_: InputType, value: [int, str]) -> None:
+		super().__init__()
+		self.type = type_
+		self.value = value
+		self.file_name = value
+		if type_ == InputFile.InputType.FILE:
+			self.file_name = value.split('/')[-1]
+
+	def serialize(self):
+		raise NotImplementedError("serialize method must be implemented")
+
+
 class MultiPartForm:
 	def __init__(self):
 		self.boundary = binascii.hexlify(os.urandom(16)).decode('ascii')
@@ -72,35 +91,41 @@ class MultiPartForm:
 	def write_params(self, params):
 		boundary = self.boundary
 		for key, value in params.items():
-			self._write_str('--%s\r\n' % boundary)
-			self._write_str('Content-Disposition: form-data; name="%s"' % key)
-			self._write_str('\r\nContent-Type: text/plain; charset=utf-8')
+			self._write_str(f'--{boundary}\r\n')
+			self._write_str(f'Content-Disposition: form-data; name="{key}"\r\n')
+			self._write_str('Content-Type: text/plain; charset=utf-8\r\n')
+			self._write_str('\r\n')
 			if value is None:
 				value = ""
-			self._write_str('\r\n\r\n' + str(value) + '\r\n')
+			self._write_str(f'{value}\r\n')
 
-	def write_file(self, field, file):
+	def write_file(self, input_file: InputFile, field: str = None):
 		boundary = self.boundary
 
-		file_size = os.fstat(file.fileno())[stat.ST_SIZE]
-		filename = file.name.split('/')[-1]
-		content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+		path = input_file.value
+		file_name = input_file.file_name
+		field = field or file_name
+		with open(path, mode="rb") as file:
+			file_size = os.fstat(file.fileno())[stat.ST_SIZE]
+			content_type = mimetypes.guess_type(file_name)[0] or 'application/octet-stream'
 
-		self._write_str('--%s\r\n' % boundary)
-		self._write_str('Content-Disposition: form-data; name="%s"; filename="%s"\r\n' % (field, filename))
-		self._write_str('Content-Type: %s; charset=utf-8\r\n' % content_type)
-		self._write_str('Content-Length: %s\r\n' % file_size)
+			self._write_str(f'--{boundary}\r\n')
+			self._write_str(f'Content-Disposition: form-data; name="{field}"; filename="{file_name}"\r\n')
+			self._write_str(f'Content-Type: {content_type}; charset=utf-8\r\n')
+			self._write_str(f'Content-Length: {file_size}\r\n')
 
-		file.seek(0)
-		self.buff.write(b'\r\n')
-		self.buff.write(file.read())
-		self.buff.write(b'\r\n')
+			file.seek(0)
+			self.buff.write(b'\r\n')
+			self.buff.write(file.read())
+			self.buff.write(b'\r\n')
+			print("[Req]", "\r\n...file data...\r\n", end="")
 
 	def _write_str(self, value: str):
+		print("[Req]", value, end="")
 		self.buff.write(value.encode('utf-8'))
 
 	def get_data(self):
-		self._write_str('--' + self.boundary + '--\r\n')
+		self._write_str(f'--{self.boundary}--\r\n')
 		return self.boundary, self.buff.getvalue()
 
 	def make_request(self, host, url):
@@ -122,35 +147,26 @@ class MultiPartForm:
 		return conn.getresponse()
 
 
-# https://core.telegram.org/bots/api#inputfile
-class InputFile(_Serializable):
-	class InputType(Enum):
-		FILE = 0
-		URL = 1
-		TELEGRAM = 2
-
-	def __init__(self, type_: InputType, value: [int, str]) -> None:
-		super().__init__()
-		self.type = type_
-		self.value = value
-
-	def serialize(self):
-		raise NotImplementedError("serialize method must be implemented")
-
-
 # service class
 class _InputBase(_Serializable):
 	def __init__(self, type_: str, media: [str, InputFile]):
 		self.type: str = type_
-		self.media: str = media
+		self.media: [str, InputFile] = media
 		self.caption: Optional[str] = None
 		self.parse_mode: Optional[str] = None
 		self.caption_entities: Optional[List[MessageEntity]] = None
 
 	def serialize(self):
+		if type(self.media) == str:
+			media = self.media
+		elif self.media.type == InputFile.InputType.FILE:
+			media = f'attach://{self.media.value}'
+		else:
+			media = self.media.value
+
 		return _make_optional({
 			"type": self.type,
-			"media": self.media,
+			"media": media,
 			"caption": self.caption,
 			"parse_mode": self.parse_mode,
 			"caption_entities": [m.serialize() for m in self.caption_entities] if self.caption_entities else None,
@@ -717,7 +733,7 @@ class API:
 			reply_markup=None
 	):
 		params = {"chat_id": chat_id, "text": text}
-		params.update(_make_optional(locals(), (self, chat_id, text)))
+		params.update(_make_optional(locals(), (self, chat_id, params, text)))
 		data = self.__make_request("sendMessage", params=params)
 		return data
 
@@ -742,27 +758,22 @@ class API:
 			return self.__make_request("sendPhoto", params=params)
 
 		photo: InputFile = photo
-		if photo.type != InputFile.InputType.FILE:
-			params.update({"photo": photo.value})
-			return self.__make_request("sendPhoto", params=params)
 
 		# Do multipart request in this case
 		form = MultiPartForm()
+
+		if photo.type != InputFile.InputType.FILE:
+			params.update({"photo": photo.value})
+		else:
+			with open(photo.value, mode="rb") as f:
+				form.write_file(photo, "photo")
+
 		form.write_params(params)
-		with open(photo.value, mode="rb") as f:
-			form.write_file("photo", f)
 
 		url = self.__get_url("sendPhoto")
 		resp = form.make_request(self.__host, url)
 		data = self.__process_response(resp)
 		return Message(**data.get("result", None))
-
-	# https://core.telegram.org/bots/api#getchatadministrators
-	def get_chat_administrators(self, chat_id: [int, str]) -> List[ChatMember]:
-		params = {"chat_id": chat_id}
-		data = self.__make_request("getChatAdministrators", params=params)
-		result_list = data.get("result", None)
-		return [ChatMember(**d) for d in result_list]
 
 	# https://core.telegram.org/bots/api#sendmediagroup
 	def send_media_group(
@@ -773,7 +784,27 @@ class API:
 			reply_to_message_id: int = None,
 			allow_sending_without_reply: bool = None
 	):
-		media = f'[]'
-		params = {"chat_id": chat_id, "media": media}
+		params = _make_optional(locals(), (self, media))
+		params["media"] = [m.serialize() for m in media]
 
-		data = self.__make_request("sendMediaGroup", params=params)
+		form = MultiPartForm()
+		form.write_params(params)
+		for m in media:
+			if type(m.media) is str:
+				continue
+			input_file: InputFile = m.media
+			if input_file.type == InputFile.InputType.FILE:
+				with open(input_file.value, mode="rb") as f:
+					form.write_file(input_file)
+
+		url = self.__get_url("sendMediaGroup")
+		resp = form.make_request(self.__host, url)
+		data = self.__process_response(resp)
+		return Message(**data.get("result", None))
+
+	# https://core.telegram.org/bots/api#getchatadministrators
+	def get_chat_administrators(self, chat_id: [int, str]) -> List[ChatMember]:
+		params = {"chat_id": chat_id}
+		data = self.__make_request("getChatAdministrators", params=params)
+		result_list = data.get("result", None)
+		return [ChatMember(**d) for d in result_list]
