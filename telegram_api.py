@@ -197,8 +197,8 @@ class InputMediaPhoto(_InputBase):
 
 # https://core.telegram.org/bots/api#inputmediavideo
 class InputMediaVideo(_InputThumb):
-	def __init__(self, type_: str, media: str):
-		super().__init__(type_, media)
+	def __init__(self, media: [str, InputFile]):
+		super().__init__("video", media)
 		self.width: Optional[int] = None
 		self.height: Optional[int] = None
 		self.duration: Optional[int] = None
@@ -217,8 +217,8 @@ class InputMediaVideo(_InputThumb):
 
 # https://core.telegram.org/bots/api#inputmediaanimation
 class InputMediaAnimation(_InputThumb):
-	def __init__(self, type_: str, media: str):
-		super().__init__(type_, media)
+	def __init__(self, media: [str, InputFile]):
+		super().__init__("animation", media)
 		self.width: Optional[int] = None
 		self.height: Optional[int] = None
 		self.duration: Optional[int] = None
@@ -235,8 +235,8 @@ class InputMediaAnimation(_InputThumb):
 
 # https://core.telegram.org/bots/api#inputmediaaudio
 class InputMediaAudio(_InputThumb):
-	def __init__(self, type_: str, media: str):
-		super().__init__(type_, media)
+	def __init__(self, media: [str, InputFile]):
+		super().__init__("audio", media)
 		self.duration: Optional[int] = None
 		self.performer: Optional[str] = None
 		self.title: Optional[str] = None
@@ -253,8 +253,8 @@ class InputMediaAudio(_InputThumb):
 
 # https://core.telegram.org/bots/api#inputmediadocument
 class InputMediaDocument(_InputThumb):
-	def __init__(self, type_: str, media: str):
-		super().__init__(type_, media)
+	def __init__(self, media: [str, InputFile]):
+		super().__init__("document", media)
 		self.disable_content_type_detection: Optional[bool] = None
 
 	def serialize(self):
@@ -406,7 +406,9 @@ class MaskPosition(DefaultFieldObject):
 class FileBase:
 	def __init__(self):
 		self.file_id: str = ""  # Identifier for this file, which can be used to download or reuse the file
-		self.file_unique_id: str = ""  # Unique	identifier for this file, which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
+		# Unique identifier for this file, which is supposed to be the same over time and for different bots.
+		# Can't be used to download or reuse the file.
+		self.file_unique_id: str = ""
 		self.file_size: int = 0  # Optional. File size
 
 
@@ -849,7 +851,7 @@ class API:
 		url = self.__get_url("sendMediaGroup")
 		resp = form.make_request(self.__host, url)
 		data = self.__process_response(resp)
-		return Message(**data.get("result", None))
+		return [Message(**d) for d in data.get("result", None)]
 
 	# https://core.telegram.org/bots/api#getchatadministrators
 	def get_chat_administrators(self, chat_id: [int, str]) -> List[ChatMember]:
