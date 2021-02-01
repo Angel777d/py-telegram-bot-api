@@ -148,14 +148,53 @@ class MultiPartForm:
 		return conn.getresponse()
 
 
-# service class
-class _InputBase(_Serializable):
-	def __init__(self, type_: str, media: [str, InputFile]):
-		self.type: str = type_
-		self.media: [str, InputFile] = media
+# part class
+class _Caption:
+	def __init__(self):
 		self.caption: Optional[str] = None
 		self.parse_mode: Optional[str] = None
 		self.caption_entities: Optional[List[MessageEntity]] = None
+
+
+# part class
+class _Location:
+	def __init__(self, latitude: float, longitude: float):
+		self.latitude: float = latitude
+		self.longitude: float = longitude
+		self.horizontal_accuracy: Optional[float] = None
+		self.live_period: Optional[int] = None
+		self.heading: Optional[int] = None
+		self.proximity_alert_radius: Optional[int] = None
+
+
+# part class
+class _Venue:
+	def __init__(self, title: str, address: str):
+		self.title: str = title
+		self.address: str = address
+
+		self.foursquare_id: Optional[str] = None
+		self.foursquare_type: Optional[str] = None
+		self.google_place_id: Optional[str] = None
+		self.google_place_type: Optional[str] = None
+
+
+# part class
+class _Contact:
+	def __init__(self, phone_number: str, first_name: str):
+		self.phone_number: str = phone_number
+		self.first_name: str = first_name
+
+		self.last_name: Optional[str] = None
+		self.vcard: Optional[str] = None
+
+
+# service class
+class _InputBase(_Serializable, _Caption):
+	def __init__(self, type_: str, media: [str, InputFile]):
+		super().__init__()
+		self.type: str = type_
+		self.media: [str, InputFile] = media
 
 	def serialize(self):
 		if type(self.media) == str:
@@ -305,6 +344,7 @@ class DefaultFieldObject:
 			"video": Video,
 			"video_note": VideoNote,
 			"voice": Voice,
+			"inline_query": InlineQuery,
 		}.copy()
 
 
@@ -322,12 +362,16 @@ class WebhookInfo(DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#inlinequery
 class InlineQuery(DefaultFieldObject):
-	pass
 
-
-class ChosenInlineResult(DefaultFieldObject):
-	pass
+	def __init__(self, **kwargs):
+		self.id: str = ""  # Unique identifier for this query
+		self.from_user: User = User()
+		self.location: Optional[Location] = None
+		self.query: str = ""  # Text of the query (up to 256 characters)
+		self.offset: str = ""  # Offset of the results to be returned, can be controlled by the bot
+		super().__init__(**kwargs)
 
 
 class CallbackQuery(DefaultFieldObject):
@@ -366,12 +410,18 @@ class Invoice(DefaultFieldObject):
 	pass
 
 
-class Location(DefaultFieldObject):
-	pass
+# https://core.telegram.org/bots/api#location
+class Location(_Location, DefaultFieldObject):
+	def __init__(self, **kwargs):
+		_Location.__init__(self, 0, 0)
+		DefaultFieldObject.__init__(self, **kwargs)
 
 
-class Venue(DefaultFieldObject):
-	pass
+class Venue(_Venue, DefaultFieldObject):
+	def __init__(self, **kwargs):
+		_Venue.__init__(self, "", "")
+		self.location: Location = Location()
+		DefaultFieldObject.__init__(self, **kwargs)
 
 
 class Game(DefaultFieldObject):
@@ -696,6 +746,265 @@ class Update(DefaultFieldObject):
 		return f'[Update] update_id: {self.update_id}, type: {self.update_types}, value: {self.__data.values()}'
 
 
+# Inline classes
+
+# https://core.telegram.org/bots/api#choseninlineresult
+class ChosenInlineResult(DefaultFieldObject):
+	def __init__(self, **kwargs):
+		self.result_id: str = ""
+		self.from_user: User = User()
+		self.location: Optional[Location] = None
+		self.inline_message_id: Optional[str] = None
+		self.query: str = ""
+		super().__init__(**kwargs)
+
+
+# https://core.telegram.org/bots/api#inputmessagecontent
+class InputMessageContent:
+	pass
+
+
+# https://core.telegram.org/bots/api#inputtextmessagecontents
+class InputTextMessageContent(InputMessageContent):
+	def __init__(self, message_text):
+		self.message_text: str = message_text
+		self.parse_mode: Optional[str] = None
+		self.entities: Optional[List[MessageEntity]] = None
+		self.disable_web_page_preview: Optional[bool] = None
+
+
+# https://core.telegram.org/bots/api#inputlocationmessagecontent
+class InputLocationMessageContent(InputMessageContent, _Location):
+	def __init__(self, latitude: float, longitude: float):
+		_Location.__init__(self, latitude, longitude)
+
+
+# https://core.telegram.org/bots/api#inputvenuemessagecontent
+class InputVenueMessageContent(InputMessageContent, _Venue):
+	def __init__(self, latitude: float, longitude: float, title: str, address: str):
+		_Venue.__init__(self, title, address)
+		self.latitude: float = latitude
+		self.longitude: float = longitude
+
+
+# https://core.telegram.org/bots/api#inputcontactmessagecontent
+class InputContactMessageContent(InputMessageContent, _Contact):
+	def __init__(self, phone_number: str, first_name: str):
+		_Contact.__init__(self, phone_number, first_name)
+
+
+# https://core.telegram.org/bots/api#inlinequeryresult
+class InlineQueryResult:
+	def __init__(
+			self,
+			type_: str,
+			id_: str,
+			reply_markup: Optional[InlineKeyboardMarkup] = None,
+			input_message_content: Optional[InputMessageContent] = None
+	):
+		self.type: str = type_
+		self.id: str = id_
+		self.reply_markup: Optional[InlineKeyboardMarkup] = reply_markup
+		self.input_message_content: Optional[InputMessageContent] = input_message_content
+
+
+# https://core.telegram.org/bots/api#inlinequeryresultarticle
+class InlineQueryResultArticle(InlineQueryResult):
+	def __init__(self, type_: str, id_: str, title: str, input_message_content: InputMessageContent):
+		super().__init__(type_, id_, input_message_content=input_message_content)
+		self.title: str = title
+		self.url: Optional[str] = None
+		self.hide_url: Optional[bool] = None
+		self.description: Optional[str] = None
+		self.thumb_url: Optional[str] = None
+		self.thumb_width: Optional[int] = None
+		self.thumb_height: Optional[int] = None
+
+
+class InlineQueryResultPhoto(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, photo_url: str, thumb_url: str):
+		super().__init__(type_, id_)
+		self.photo_url: str = photo_url
+		self.thumb_url: str = thumb_url
+		self.photo_width: Optional[int] = None
+		self.photo_height: Optional[int] = None
+		self.title: Optional[str] = None
+		self.description: Optional[str] = None
+
+
+class InlineQueryResultGif(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str):
+		super().__init__(type_, id_)
+		self.gif_url: str = ""
+		self.gif_width: Optional[int] = None
+		self.gif_height: Optional[int] = None
+		self.gif_duration: Optional[int] = None
+		self.thumb_url: Optional[str] = None
+		self.thumb_mime_type: Optional[str] = None
+		self.title: Optional[str] = None
+
+
+class InlineQueryResultMpeg4Gif(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str):
+		super().__init__(type_, id_)
+		self.mpeg4_url: str = ""
+		self.mpeg4_width: Optional[int] = None
+		self.mpeg4_height: Optional[int] = None
+		self.mpeg4_duration: Optional[int] = None
+
+		self.thumb_url: Optional[str] = None
+		self.thumb_mime_type: Optional[str] = None
+		self.title: Optional[str] = None
+
+
+class InlineQueryResultCachedMpeg4Gif(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, mpeg4_file_id: str):
+		super().__init__(type_, id_)
+		self.mpeg4_file_id: str = mpeg4_file_id
+		self.title: Optional[str] = None
+
+
+class InlineQueryResultVideo(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, title: str, video_url: str, mime_type: str, thumb_url: str):
+		super().__init__(type_, id_)
+		self.title: str = title
+		self.video_url: str = video_url
+		self.mime_type: str = mime_type
+		self.thumb_url: str = thumb_url
+
+		self.video_width: Optional[int] = None
+		self.video_height: Optional[int] = None
+		self.video_duration: Optional[int] = None
+
+		self.description: Optional[str] = None
+
+
+class InlineQueryResultAudio(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, title: str, audio_url: str):
+		super().__init__(type_, id_)
+		self.title: str = title
+		self.audio_url: str = audio_url
+		self.performer: Optional[str] = None
+		self.audio_duration: Optional[int] = None
+
+
+class InlineQueryResultVoice(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, title: str, voice_url: str):
+		super().__init__(type_, id_)
+		self.title: str = title
+		self.voice_url: str = voice_url
+		self.voice_duration: Optional[int] = None
+
+
+class InlineQueryResultDocument(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, title: str, document_url: str, mime_type: str):
+		super().__init__(type_, id_)
+		self.title: str = title
+		self.document_url: str = document_url
+		self.mime_type: str = mime_type
+		self.description: Optional[str] = None
+
+		self.thumb_url: Optional[str] = None
+		self.thumb_width: Optional[int] = None
+		self.thumb_height: Optional[int] = None
+
+
+class InlineQueryResultLocation(InlineQueryResult, _Location):
+	def __init__(self, type_: str, id_: str, title: str, latitude: float, longitude: float):
+		InlineQueryResult.__init__(self, type_, id_)
+		_Location.__init__(self, latitude, longitude)
+		self.title: str = title
+
+		self.thumb_url: Optional[str] = None
+		self.thumb_width: Optional[int] = None
+		self.thumb_height: Optional[int] = None
+
+
+class InlineQueryResultVenue(InlineQueryResult, _Venue):
+	def __init__(self, type_: str, id_: str, title: str, latitude: float, longitude: float, address: str):
+		super().__init__(type_, id_)
+		self.latitude: float = latitude
+		self.longitude: float = longitude
+
+		_Venue.__init__(self, title, address)
+
+		self.thumb_url: Optional[str] = None
+		self.thumb_width: Optional[int] = None
+		self.thumb_height: Optional[int] = None
+
+
+class InlineQueryResultContact(InlineQueryResult, _Contact):
+	def __init__(self, type_: str, id_: str, phone_number: str, first_name: str):
+		InlineQueryResult.__init__(self, type_, id_)
+		_Contact.__init__(self, phone_number, first_name)
+
+		self.thumb_url: Optional[str] = None
+		self.thumb_width: Optional[int] = None
+		self.thumb_height: Optional[int] = None
+
+
+class InlineQueryResultGame(InlineQueryResult):
+	def __init__(self, type_: str, id_: str, game_short_name: str):
+		super().__init__(type_, id_)
+		self.game_short_name: str = game_short_name
+
+
+class InlineQueryResultCachedPhoto(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, photo_file_id: str):
+		super().__init__(type_, id_)
+		self.photo_file_id: str = photo_file_id
+
+		self.title: Optional[str] = None
+		self.description: Optional[str] = None
+
+
+class InlineQueryResultCachedGif(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, gif_file_id: str):
+		super().__init__(type_, id_)
+		self.gif_file_id: str = gif_file_id
+
+		self.title: Optional[str] = None
+
+
+class InlineQueryResultCachedSticker(InlineQueryResult):
+	def __init__(self, type_: str, id_: str, sticker_file_id: str):
+		super().__init__(type_, id_)
+		self.sticker_file_id: str = sticker_file_id
+
+
+class InlineQueryResultCachedDocument(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, title: str, document_file_id: str):
+		super().__init__(type_, id_)
+		self.title: str = title
+		self.document_file_id: str = document_file_id
+
+		self.description: Optional[str] = None
+
+
+class InlineQueryResultCachedVideo(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, title: str, video_file_id: str):
+		super().__init__(type_, id_)
+		self.title: str = title
+		self.video_file_id: str = video_file_id
+
+		self.description: Optional[str] = None
+
+
+class InlineQueryResultCachedVoice(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, title: str, voice_file_id: str):
+		super().__init__(type_, id_)
+		self.title: str = title
+		self.voice_file_id: str = voice_file_id
+
+		self.description: Optional[str] = None
+
+
+class InlineQueryResultCachedAudio(InlineQueryResult, _Caption):
+	def __init__(self, type_: str, id_: str, audio_file_id: str):
+		super().__init__(type_, id_)
+		self.audio_file_id: str = audio_file_id
+
+
 # API METHODS
 class API:
 	def __init__(self, token: str, host: str = "api.telegram.org"):
@@ -859,3 +1168,17 @@ class API:
 		data = self.__make_request("getChatAdministrators", params=params)
 		result_list = data.get("result", None)
 		return [ChatMember(**d) for d in result_list]
+
+	# https://core.telegram.org/bots/api#answerinlinequery
+	def answer_inline_query(
+			self,
+			inline_query_id: str,
+			results: List[InlineQueryResult],
+			cache_time: Optional[int] = None,
+			is_personal: Optional[bool] = None,
+			next_offset: Optional[str] = None,
+			switch_pm_text: Optional[str] = None,
+			switch_pm_parameter: Optional[str] = None,
+	):
+		method = "answerInlineQuery"
+		pass
