@@ -83,6 +83,7 @@ class InputFile(_Serializable):
 		raise NotImplementedError("serialize method must be implemented")
 
 
+# service class
 class MultiPartForm:
 	def __init__(self):
 		self.boundary = binascii.hexlify(os.urandom(16)).decode('ascii')
@@ -271,7 +272,7 @@ class DefaultFieldObject:
 		_fill_object(self, kwargs)
 
 	def __repr__(self):
-		return f'[DefaultDataClass] data: {self.__data}'
+		return f'[{self.__class__.__name__}] data: {self.__dict__}'
 
 	def get_fields(self) -> KeysView[str]:
 		return self.__data.keys()
@@ -305,6 +306,20 @@ class DefaultFieldObject:
 			"video_note": VideoNote,
 			"voice": Voice,
 		}.copy()
+
+
+# https://core.telegram.org/bots/api#webhookinfo
+class WebhookInfo(DefaultFieldObject):
+	def __init__(self, **kwargs):
+		self.url: str = ""
+		self.has_custom_certificate: bool = False
+		self.pending_update_count: int = 0
+		self.ip_address: Optional[str] = None
+		self.last_error_date: Optional[int] = None
+		self.last_error_message: Optional[str] = None
+		self.max_connections: Optional[int] = None
+		self.allowed_updates: Optional[List[str]] = None
+		super().__init__(**kwargs)
 
 
 class InlineQuery(DefaultFieldObject):
@@ -715,6 +730,38 @@ class API:
 		data = resp.read()
 		parsed_data = json.loads(data)
 		return parsed_data
+
+	# https://core.telegram.org/bots/api#setwebhook
+	def set_webhook(
+			self,
+			url: str,
+			certificate: Optional[InputFile] = None,
+			ip_address: Optional[str] = None,
+			max_connections: Optional[int] = None,
+			allowed_updates: Optional[List[str]] = None,
+			drop_pending_updates: Optional[bool] = None
+	):
+		params = _make_optional(locals(), (self, certificate))
+		form = MultiPartForm()
+		form.write_params(params)
+		if certificate:
+			form.write_file(certificate, "certificate")
+
+		url = self.__get_url("setWebhook")
+		resp = form.make_request(self.__host, url)
+		data = self.__process_response(resp)
+		return data.get("result")
+
+	# https://core.telegram.org/bots/api#deletewebhook
+	def delete_webhook(self, drop_pending_updates: Optional[bool] = None):
+		params = _make_optional({"drop_pending_updates": drop_pending_updates})
+		data = self.__make_request("deleteWebhook", params=params)
+		return data.get("result")
+
+	# https://core.telegram.org/bots/api#getwebhookinfo
+	def get_webhook_info(self):
+		data = self.__make_request("getWebhookInfo", params={})
+		return WebhookInfo(**data.get("result"))
 
 	# https://core.telegram.org/bots/api#getupdates
 	def get_updates(self, offset=None, limit=None, timeout=None, allowed_updates=None) -> List[Update]:
