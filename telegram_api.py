@@ -6,7 +6,7 @@ import os
 import stat
 from enum import Enum
 from io import BytesIO
-from typing import List, Optional, Tuple, KeysView, Any
+from typing import List, Optional, Tuple, KeysView, Any, Union
 from urllib.parse import urlencode
 
 
@@ -103,6 +103,14 @@ class MultiPartForm:
 			if value is None:
 				value = ""
 			self._write_str(f'{value}\r\n')
+
+	def write_one_input(self, input_file: [InputFile, str], field: str):
+		if type(input_file) is str:
+			self.write_params({field: input_file})
+		elif input_file.type != InputFile.InputType.FILE:
+			self.write_params({field: input_file.value})
+		else:
+			self.write_file(input_file, field)
 
 	def write_file(self, input_file: InputFile, field: str = None):
 		boundary = self.boundary
@@ -1241,11 +1249,10 @@ class API:
 			allow_sending_without_reply: Optional[bool] = None,
 			reply_markup: Optional[_KeyboardMarkup] = None
 	) -> MessageId:
-		params = _make_optional(locals(), (self, reply_markup))
-		if reply_markup:
-			params["reply_markup"] = json.dumps(reply_markup.serialize())
+		params = _make_optional(locals(), (self, caption_entities))
 		if caption_entities:
 			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
+
 		data = self.__make_request("copyMessage", params=params)
 		return MessageId(**data.get("result"))
 
@@ -1254,35 +1261,49 @@ class API:
 			self,
 			chat_id: [int, str],
 			photo: [InputFile, str],
-			caption: str = None,
-			parse_mode: str = None,
-			caption_entities: list = None,
-			disable_notification: bool = None,
-			reply_to_message_id: int = None,
-			allow_sending_without_reply: bool = None,
-			reply_markup=None,
+			caption: Optional[str] = None,
+			parse_mode: Optional[str] = None,
+			caption_entities: Optional[List[MessageEntity]] = None,
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None
 	):
-		# params = {"chat_id": chat_id}
-		# params.update(_make_optional(locals(), (self, chat_id, photo, params)))
-		#
-		# if type(photo) is str:
-		# 	params.update({"photo": photo})
-		# 	return self.__make_request("sendPhoto", params=params)
-		#
-		# photo: InputFile = photo
+		params = _make_optional(locals(), (self, photo, caption_entities))
+		if caption_entities:
+			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
 
-		# Do multipart request in this case
-		params = _make_optional(locals(), (self, photo))
 		form = MultiPartForm()
 		form.write_params(params)
-
-		if photo.type != InputFile.InputType.FILE:
-			params.update({"photo": photo.value})
-		else:
-			with open(photo.value, mode="rb") as f:
-				form.write_file(photo, "photo")
+		form.write_one_input(photo, "photo")
 
 		data = self.__make_multipart_request(form, "sendPhoto")
+		return Message(**data.get("result", None))
+
+	# https://core.telegram.org/bots/api#sendaudio
+	def send_audio(
+			self,
+			chat_id: [int, str],
+			audio: [InputFile, str],
+			caption: Optional[str] = None,
+			parse_mode: Optional[str] = None,
+			caption_entities: Optional[List[MessageEntity]] = None,
+			duration: Optional[int] = None,
+			performer: Optional[str] = None,
+			title: Optional[str] = None,
+			thumb: Optional[Union[InputFile, str]] = None
+	):
+		params = _make_optional(locals(), (self, audio, caption_entities, thumb))
+		if caption_entities:
+			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
+
+		form = MultiPartForm()
+		form.write_params(params)
+		form.write_one_input(audio, "audio")
+		if thumb:
+			form.write_one_input(thumb, "thumb")
+
+		data = self.__make_multipart_request(form, "sendAudio")
 		return Message(**data.get("result", None))
 
 	# https://core.telegram.org/bots/api#setwebhook
@@ -1340,8 +1361,7 @@ class API:
 				continue
 			input_file: InputFile = m.media
 			if input_file.type == InputFile.InputType.FILE:
-				with open(input_file.value, mode="rb") as f:
-					form.write_file(input_file)
+				form.write_file(input_file)
 		form.write_params(params)
 
 		data = self.__make_multipart_request(form, "sendMediaGroup")
@@ -1376,8 +1396,9 @@ class API:
 		resp = form.make_request(self.__host, url)
 		return self.__process_response(resp)
 
-	def __make_request(self, api_method, method="POST", params=None):
+	def __make_request(self, api_method: str, method="POST", params: Optional[dict] = {}):
 		url = self.__get_url(api_method)
+		params = {k: json.dumps(v.serialize()) if hasattr(v, "serialize") else v for k, v in params.items()}
 		params = urlencode(params)
 
 		headers = {
