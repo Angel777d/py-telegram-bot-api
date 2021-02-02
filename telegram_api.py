@@ -6,7 +6,7 @@ import os
 import stat
 from enum import Enum
 from io import BytesIO
-from typing import List, Optional, Tuple, KeysView
+from typing import List, Optional, Tuple, KeysView, Any
 from urllib.parse import urlencode
 
 
@@ -39,6 +39,10 @@ class ChatType(Enum):
 	CHANNEL = "channel"
 
 	WRONG = "wrong"
+
+
+def _get_public(obj: Any):
+	return {name: getattr(obj, name) for name in vars(obj) if not name.startswith('_')}
 
 
 def _make_optional(params: dict, exclude=()):
@@ -348,6 +352,13 @@ class DefaultFieldObject:
 		}.copy()
 
 
+# https://core.telegram.org/bots/api#messageid
+class MessageId(DefaultFieldObject):
+	def __init__(self, **kwargs):
+		self.message_id: int = 0
+		super().__init__(**kwargs)
+
+
 # https://core.telegram.org/bots/api#webhookinfo
 class WebhookInfo(DefaultFieldObject):
 	def __init__(self, **kwargs):
@@ -374,8 +385,17 @@ class InlineQuery(DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#callbackquery
 class CallbackQuery(DefaultFieldObject):
-	pass
+	def __init__(self, **kwargs):
+		self.id: str = ""
+		self.from_user: User = User()
+		self.message: Optional[Message] = None
+		self.inline_message_id: Optional[str] = None
+		self.chat_instance: Optional[str] = None
+		self.data: Optional[str] = None
+		self.game_short_name: Optional[str] = None
+		super().__init__(**kwargs)
 
 
 class ShippingQuery(DefaultFieldObject):
@@ -440,8 +460,129 @@ class ChatPhoto(DefaultFieldObject):
 	pass
 
 
-class InlineKeyboardMarkup(DefaultFieldObject):
-	pass
+# https://core.telegram.org/bots/api#loginurl
+class LoginUrl(_Serializable):
+	def __init__(self, url: str):
+		self.url: str = url
+		self.forward_text: Optional[str] = None
+		self.bot_username: Optional[str] = None
+		self.request_write_access: Optional[bool] = None
+
+	def serialize(self):
+		return _make_optional(_get_public(self))
+
+
+# https://core.telegram.org/bots/api#callbackgame
+class CallbackGame(_Serializable):
+	def __init__(
+			self,
+			user_id: int,
+			score: int,
+			force: Optional[bool] = None,
+			disable_edit_message: Optional[bool] = None,
+			chat_id: Optional[int] = None,
+			message_id: Optional[int] = None,
+			inline_message_id: Optional[str] = None
+	):
+		assert inline_message_id or (chat_id and message_id), "inline_message_id or chat_id and message_id must be set"
+		self.user_id: int = user_id
+		self.score: int = score
+		self.force: Optional[bool] = force
+		self.disable_edit_message: Optional[bool] = disable_edit_message
+		self.chat_id: Optional[int] = chat_id
+		self.message_id: Optional[int] = message_id
+		self.inline_message_id: Optional[str] = inline_message_id
+
+	def serialize(self):
+		return _make_optional(_get_public(self))
+
+
+# https://core.telegram.org/bots/api#inlinekeyboardbutton
+class InlineKeyboardButton(_Serializable):
+	def __init__(
+			self,
+			text: str,
+			url: Optional[str] = None,
+			login_url: Optional[str] = None,
+			callback_data: Optional[str] = None,
+			switch_inline_query: Optional[str] = None,
+			switch_inline_query_current_chat: Optional[str] = None,
+			callback_game: Optional[CallbackGame] = None,
+			pay: Optional[bool] = None
+	):
+		self.text: str = text
+		self.url: Optional[str] = url
+		self.login_url: Optional[LoginUrl] = login_url
+		self.callback_data: Optional[str] = callback_data
+		self.switch_inline_query: Optional[str] = switch_inline_query
+		self.switch_inline_query_current_chat: Optional[str] = switch_inline_query_current_chat
+		self.callback_game: Optional[CallbackGame] = callback_game
+		self.pay: Optional[bool] = pay
+
+	def serialize(self):
+		result = _make_optional(_get_public(self), (self.callback_game,))
+		if self.callback_game:
+			result["callback_game"] = self.callback_game.serialize()
+		assert len(result) == 2, "[InlineKeyboardButton] You must use exactly one of the optional fields"
+		return result
+
+
+# service class
+class _KeyboardMarkup(_Serializable):
+	def serialize(self):
+		raise NotImplementedError("serialize method must be implemented")
+
+
+# https://core.telegram.org/bots/api#inlinekeyboardmarkup
+class InlineKeyboardMarkup(_KeyboardMarkup):
+	def __init__(self, inline_keyboard: List[List[InlineKeyboardButton]]):
+		self.inline_keyboard: List[List[InlineKeyboardButton]] = inline_keyboard
+
+	def serialize(self):
+		return {
+			"inline_keyboard": [[b.serialize() for b in a] for a in self.inline_keyboard]
+		}
+
+
+# https://core.telegram.org/bots/api#replykeyboardmarkup
+class ReplyKeyboardMarkup(_KeyboardMarkup):
+	def __init__(
+			self,
+			keyboard: List[List[InlineKeyboardButton]],
+			resize_keyboard: Optional[bool] = None,
+			one_time_keyboard: Optional[bool] = None,
+			selective: Optional[bool] = None,
+	):
+		self.keyboard: List[List[InlineKeyboardButton]] = keyboard
+		self.resize_keyboard: Optional[bool] = resize_keyboard
+		self.one_time_keyboard: Optional[bool] = one_time_keyboard
+		self.selective: Optional[bool] = selective
+
+	def serialize(self):
+		result = _make_optional(_get_public(self))
+		if self.keyboard:
+			result["keyboard"] = [[b.serialize() for b in a] for a in self.keyboard]
+		return result
+
+
+# https://core.telegram.org/bots/api#replykeyboardmarkup
+class ReplyKeyboardRemove(_KeyboardMarkup):
+	def __init__(self, remove_keyboard: bool = True, selective: Optional[bool] = None):
+		self.remove_keyboard: bool = remove_keyboard
+		self.selective: Optional[bool] = selective
+
+	def serialize(self):
+		return _make_optional(_get_public(self))
+
+
+# https://core.telegram.org/bots/api#forcereply
+class ForceReply(_KeyboardMarkup):
+	def __init__(self, force_reply: bool = True, selective: Optional[bool] = None):
+		self.force_reply: bool = force_reply
+		self.selective: Optional[bool] = selective
+
+	def serialize(self):
+		return _make_optional(_get_public(self))
 
 
 class MaskPosition(DefaultFieldObject):
@@ -1044,75 +1185,20 @@ class API:
 		self.__host = host
 		self.__token = token
 
-	def __get_url(self, api_method) -> str:
-		return f'https://{self.__host}/bot{self.__token}/{api_method}'
+	# https://core.telegram.org/bots/api#getme
+	def get_me(self) -> User:
+		data = self.__make_request("getMe", params={})
+		return User(**data.get("result"))
 
-	def __make_request(self, api_method, method="POST", params=None):
-		url = self.__get_url(api_method)
-		params = urlencode(params)
+	# https://core.telegram.org/bots/api#logout
+	def log_out(self) -> bool:
+		data = self.__make_request("logOut", params={})
+		return bool(data.get("result"))
 
-		headers = {
-			"Content-type": "application/x-www-form-urlencoded",
-			"Accept": "application/json"
-		}
-
-		conn = http.client.HTTPSConnection(self.__host)
-		conn.request(method, url, params, headers)
-
-		return self.__process_response(conn.getresponse())
-
-	@staticmethod
-	def __process_response(resp):
-		if resp.reason != "OK":
-			data = resp.read()
-			raise ValueError("unexpected reason", data)
-
-		if resp.getcode() != 200:
-			data = resp.read()
-			raise ValueError("unexpected code", data)
-
-		data = resp.read()
-		parsed_data = json.loads(data)
-		return parsed_data
-
-	# https://core.telegram.org/bots/api#setwebhook
-	def set_webhook(
-			self,
-			url: str,
-			certificate: Optional[InputFile] = None,
-			ip_address: Optional[str] = None,
-			max_connections: Optional[int] = None,
-			allowed_updates: Optional[List[str]] = None,
-			drop_pending_updates: Optional[bool] = None
-	):
-		params = _make_optional(locals(), (self, certificate))
-		form = MultiPartForm()
-		form.write_params(params)
-		if certificate:
-			form.write_file(certificate, "certificate")
-
-		url = self.__get_url("setWebhook")
-		resp = form.make_request(self.__host, url)
-		data = self.__process_response(resp)
-		return data.get("result")
-
-	# https://core.telegram.org/bots/api#deletewebhook
-	def delete_webhook(self, drop_pending_updates: Optional[bool] = None):
-		params = _make_optional({"drop_pending_updates": drop_pending_updates})
-		data = self.__make_request("deleteWebhook", params=params)
-		return data.get("result")
-
-	# https://core.telegram.org/bots/api#getwebhookinfo
-	def get_webhook_info(self):
-		data = self.__make_request("getWebhookInfo", params={})
-		return WebhookInfo(**data.get("result"))
-
-	# https://core.telegram.org/bots/api#getupdates
-	def get_updates(self, offset=None, limit=None, timeout=None, allowed_updates=None) -> List[Update]:
-		params = _make_optional(locals(), (self,))
-		data = self.__make_request("getUpdates", params=params)
-		update_list = data.get("result", None)
-		return [Update(**d) for d in update_list]
+	# https://core.telegram.org/bots/api#close
+	def close(self) -> bool:
+		data = self.__make_request("close", params={})
+		return bool(data.get("result"))
 
 	# https://core.telegram.org/bots/api#sendmessage
 	def send_message(
@@ -1124,11 +1210,44 @@ class API:
 			disable_notification: bool = None,
 			reply_to_message_id: int = None,
 			reply_markup=None
-	):
-		params = {"chat_id": chat_id, "text": text}
-		params.update(_make_optional(locals(), (self, chat_id, params, text)))
+	) -> Message:
+		params = _make_optional(locals(), (self,))
 		data = self.__make_request("sendMessage", params=params)
-		return data
+		return Message(**data.get("result"))
+
+	# https://core.telegram.org/bots/api#forwardmessage
+	def forward_message(
+			self,
+			chat_id: [int, str],
+			from_chat_id: [int, str],
+			message_id: int,
+			disable_notification: Optional[bool] = None
+	) -> Message:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("forwardMessage", params=params)
+		return Message(**data.get("result"))
+
+	# https://core.telegram.org/bots/api#copymessage
+	def copy_message(
+			self,
+			chat_id: [int, str],
+			from_chat_id: [int, str],
+			message_id: int,
+			caption: Optional[str] = None,
+			parse_mode: Optional[str] = None,
+			caption_entities: Optional[List[MessageEntity]] = None,
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None
+	) -> MessageId:
+		params = _make_optional(locals(), (self, reply_markup))
+		if reply_markup:
+			params["reply_markup"] = json.dumps(reply_markup.serialize())
+		if caption_entities:
+			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
+		data = self.__make_request("copyMessage", params=params)
+		return MessageId(**data.get("result"))
 
 	# https://core.telegram.org/bots/api#sendphoto
 	def send_photo(
@@ -1143,17 +1262,19 @@ class API:
 			allow_sending_without_reply: bool = None,
 			reply_markup=None,
 	):
-		params = {"chat_id": chat_id}
-		params.update(_make_optional(locals(), (self, chat_id, photo, params)))
-
-		if type(photo) is str:
-			params.update({"photo": photo})
-			return self.__make_request("sendPhoto", params=params)
-
-		photo: InputFile = photo
+		# params = {"chat_id": chat_id}
+		# params.update(_make_optional(locals(), (self, chat_id, photo, params)))
+		#
+		# if type(photo) is str:
+		# 	params.update({"photo": photo})
+		# 	return self.__make_request("sendPhoto", params=params)
+		#
+		# photo: InputFile = photo
 
 		# Do multipart request in this case
+		params = _make_optional(locals(), (self, photo))
 		form = MultiPartForm()
+		form.write_params(params)
 
 		if photo.type != InputFile.InputType.FILE:
 			params.update({"photo": photo.value})
@@ -1161,12 +1282,45 @@ class API:
 			with open(photo.value, mode="rb") as f:
 				form.write_file(photo, "photo")
 
-		form.write_params(params)
-
-		url = self.__get_url("sendPhoto")
-		resp = form.make_request(self.__host, url)
-		data = self.__process_response(resp)
+		data = self.__make_multipart_request(form, "sendPhoto")
 		return Message(**data.get("result", None))
+
+	# https://core.telegram.org/bots/api#setwebhook
+	def set_webhook(
+			self,
+			url: str,
+			certificate: Optional[InputFile] = None,
+			ip_address: Optional[str] = None,
+			max_connections: Optional[int] = None,
+			allowed_updates: Optional[List[str]] = None,
+			drop_pending_updates: Optional[bool] = None
+	) -> bool:
+		params = _make_optional(locals(), (self, certificate))
+		form = MultiPartForm()
+		form.write_params(params)
+		if certificate:
+			form.write_file(certificate, "certificate")
+
+		data = self.__make_multipart_request(form, "setWebhook")
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#deletewebhook
+	def delete_webhook(self, drop_pending_updates: Optional[bool] = None) -> bool:
+		params = _make_optional({"drop_pending_updates": drop_pending_updates})
+		data = self.__make_request("deleteWebhook", params=params)
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#getwebhookinfo
+	def get_webhook_info(self):
+		data = self.__make_request("getWebhookInfo", params={})
+		return WebhookInfo(**data.get("result"))
+
+	# https://core.telegram.org/bots/api#getupdates
+	def get_updates(self, offset=None, limit=None, timeout=None, allowed_updates=None) -> List[Update]:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("getUpdates", params=params)
+		update_list = data.get("result", None)
+		return [Update(**d) for d in update_list]
 
 	# https://core.telegram.org/bots/api#sendmediagroup
 	def send_media_group(
@@ -1190,9 +1344,7 @@ class API:
 					form.write_file(input_file)
 		form.write_params(params)
 
-		url = self.__get_url("sendMediaGroup")
-		resp = form.make_request(self.__host, url)
-		data = self.__process_response(resp)
+		data = self.__make_multipart_request(form, "sendMediaGroup")
 		return [Message(**d) for d in data.get("result", None)]
 
 	# https://core.telegram.org/bots/api#getchatadministrators
@@ -1215,3 +1367,52 @@ class API:
 	):
 		method = "answerInlineQuery"
 		pass
+
+	def __get_url(self, api_method) -> str:
+		return f'https://{self.__host}/bot{self.__token}/{api_method}'
+
+	def __make_multipart_request(self, form, api_method):
+		url = self.__get_url(api_method)
+		resp = form.make_request(self.__host, url)
+		return self.__process_response(resp)
+
+	def __make_request(self, api_method, method="POST", params=None):
+		url = self.__get_url(api_method)
+		params = urlencode(params)
+
+		headers = {
+			"Content-type": "application/x-www-form-urlencoded",
+			"Accept": "application/json"
+		}
+
+		conn = http.client.HTTPSConnection(self.__host)
+		conn.request(method, url, params, headers)
+
+		return self.__process_response(conn.getresponse())
+
+	@staticmethod
+	def __process_response(resp):
+		if resp.reason != "OK":
+			data = resp.read()
+			print(resp)
+			raise ValueError("unexpected reason", data)
+
+		if resp.getcode() != 200:
+			data = resp.read()
+			raise ValueError("unexpected code", data)
+
+		data = resp.read()
+		parsed_data = json.loads(data)
+		return parsed_data
+
+	def answer_callback_query(
+			self,
+			callback_query_id: str,
+			text: Optional[str] = None,
+			show_alert: Optional[bool] = None,
+			url: Optional[str] = None,
+			cache_time: Optional[int] = None
+	) -> bool:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("answerCallbackQuery", params=params)
+		return bool(data.get("result"))
