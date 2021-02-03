@@ -479,7 +479,7 @@ class Dice(DefaultFieldObject):
 	pass
 
 
-class ChatPermissions(DefaultFieldObject):
+class ChatPermissions(DefaultFieldObject, _Serializable):
 	def __init__(self, **kwargs):
 		self.can_send_messages: Optional[bool] = None
 		self.can_send_media_messages: Optional[bool] = None
@@ -490,6 +490,9 @@ class ChatPermissions(DefaultFieldObject):
 		self.can_invite_users: Optional[bool] = None
 		self.can_pin_messages: Optional[bool] = None
 		super().__init__(**kwargs)
+
+	def serialize(self):
+		return _make_optional(_get_public(self))
 
 
 class ChatPhoto(DefaultFieldObject):
@@ -1733,12 +1736,72 @@ class API:
 		data = self.__make_request("restrictChatMember", params=params)
 		return bool(data.get("result"))
 
+	# https://core.telegram.org/bots/api#promotechatmember
+	def promote_chat_member(
+			self,
+			chat_id: [int, str],
+			user_id: int,
+			is_anonymous: Optional[bool] = None,
+			can_change_info: Optional[bool] = None,
+			can_post_messages: Optional[bool] = None,
+			can_edit_messages: Optional[bool] = None,
+			can_delete_messages: Optional[bool] = None,
+			can_invite_users: Optional[bool] = None,
+			can_restrict_members: Optional[bool] = None,
+			can_pin_messages: Optional[bool] = None,
+			can_promote_members: Optional[bool] = None
+	) -> bool:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("promoteChatMember", params=params)
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#setchatadministratorcustomtitle
+	def set_chat_administrator_custom_title(
+			self,
+			chat_id: [int, str],
+			user_id: int,
+			custom_title: str,
+	) -> bool:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("setChatAdministratorCustomTitle", params=params)
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#setchatpermissions
+	def set_chat_permissions(
+			self,
+			chat_id: [int, str],
+			permissions: ChatPermissions,
+	) -> bool:
+		data = self.__make_request("setChatPermissions", {"chat_id": chat_id, "permissions": permissions})
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#exportchatinvitelink
+	def export_chat_invite_link(self, chat_id: [int, str]) -> str:
+		data = self.__make_request("exportChatInviteLink", {"chat_id": chat_id})
+		return str(data.get("result"))
+
+	# https://core.telegram.org/bots/api#setchatphoto
+	def set_chat_photo(
+			self,
+			chat_id: [int, str],
+			photo: InputFile,
+	) -> bool:
+		form = MultiPartForm()
+		form.write_params({"chat_id": chat_id})
+		form.write_one_input(photo, "photo")
+
+		data = self.__make_multipart_request(form, "setChatPhoto")
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#deletechatphoto
+	def delete_chat_photo(self, chat_id: [int, str]) -> bool:
+		data = self.__make_request("deleteChatPhoto", {"chat_id": chat_id})
+		return bool(data.get("result"))
+
 	# https://core.telegram.org/bots/api#getchatadministrators
 	def get_chat_administrators(self, chat_id: [int, str]) -> List[ChatMember]:
-		params = {"chat_id": chat_id}
-		data = self.__make_request("getChatAdministrators", params=params)
-		result_list = data.get("result", None)
-		return [ChatMember(**d) for d in result_list]
+		data = self.__make_request("getChatAdministrators", {"chat_id": chat_id})
+		return [ChatMember(**d) for d in data.get("result")]
 
 	# https://core.telegram.org/bots/api#answercallbackquery
 	def answer_callback_query(
@@ -1775,7 +1838,7 @@ class API:
 		resp = form.make_request(self.__host, url)
 		return self.__process_response(resp)
 
-	def __make_request(self, api_method: str, method="POST", params: Optional[dict] = None):
+	def __make_request(self, api_method: str, params: Optional[dict] = None, method="POST"):
 		url = self.__get_url(api_method)
 		params = {k: json.dumps(v.serialize()) if hasattr(v, "serialize") else v for k, v in params.items()}
 		params = urlencode(params)
