@@ -55,7 +55,7 @@ def _fill_object(target, data):
 
 
 def __ch_list(target, k, v):
-	return [__ch_obj(target, k, a) for a in v] if type(v) is list else __ch_obj(target, k, v)
+	return [__ch_list(target, k, a) for a in v] if type(v) is list else __ch_obj(target, k, v)
 
 
 def __ch_obj(target, k, v):
@@ -357,6 +357,7 @@ class DefaultFieldObject:
 			"video_note": VideoNote,
 			"voice": Voice,
 			"inline_query": InlineQuery,
+			"photos": PhotoSize,
 		}.copy()
 
 
@@ -364,6 +365,24 @@ class DefaultFieldObject:
 class MessageId(DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.message_id: int = 0
+		super().__init__(**kwargs)
+
+
+# https://core.telegram.org/bots/api#userprofilephotos
+class UserProfilePhotos(DefaultFieldObject):
+	def __init__(self, **kwargs):
+		self.total_count: int = 0
+		self.photos: List[List[PhotoSize]]
+		super().__init__(**kwargs)
+
+
+# https://core.telegram.org/bots/api#userprofilephotos
+class File(DefaultFieldObject):
+	def __init__(self, **kwargs):
+		self.file_id: str = ""
+		self.file_unique_id: str = ""
+		self.file_size: Optional[int] = None
+		self.file_path: Optional[str] = None
 		super().__init__(**kwargs)
 
 
@@ -461,7 +480,16 @@ class Dice(DefaultFieldObject):
 
 
 class ChatPermissions(DefaultFieldObject):
-	pass
+	def __init__(self, **kwargs):
+		self.can_send_messages: Optional[bool] = None
+		self.can_send_media_messages: Optional[bool] = None
+		self.can_send_polls: Optional[bool] = None
+		self.can_send_other_messages: Optional[bool] = None
+		self.can_add_web_page_previews: Optional[bool] = None
+		self.can_change_info: Optional[bool] = None
+		self.can_invite_users: Optional[bool] = None
+		self.can_pin_messages: Optional[bool] = None
+		super().__init__(**kwargs)
 
 
 class ChatPhoto(DefaultFieldObject):
@@ -1193,6 +1221,43 @@ class API:
 		self.__host = host
 		self.__token = token
 
+	# https://core.telegram.org/bots/api#getupdates
+	def get_updates(self, offset=None, limit=None, timeout=None, allowed_updates=None) -> List[Update]:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("getUpdates", params=params)
+		update_list = data.get("result", None)
+		return [Update(**d) for d in update_list]
+
+	# https://core.telegram.org/bots/api#setwebhook
+	def set_webhook(
+			self,
+			url: str,
+			certificate: Optional[InputFile] = None,
+			ip_address: Optional[str] = None,
+			max_connections: Optional[int] = None,
+			allowed_updates: Optional[List[str]] = None,
+			drop_pending_updates: Optional[bool] = None
+	) -> bool:
+		params = _make_optional(locals(), (self, certificate))
+		form = MultiPartForm()
+		form.write_params(params)
+		if certificate:
+			form.write_file(certificate, "certificate")
+
+		data = self.__make_multipart_request(form, "setWebhook")
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#deletewebhook
+	def delete_webhook(self, drop_pending_updates: Optional[bool] = None) -> bool:
+		params = _make_optional({"drop_pending_updates": drop_pending_updates})
+		data = self.__make_request("deleteWebhook", params=params)
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#getwebhookinfo
+	def get_webhook_info(self):
+		data = self.__make_request("getWebhookInfo", params={})
+		return WebhookInfo(**data.get("result"))
+
 	# https://core.telegram.org/bots/api#getme
 	def get_me(self) -> User:
 		data = self.__make_request("getMe", params={})
@@ -1306,42 +1371,160 @@ class API:
 		data = self.__make_multipart_request(form, "sendAudio")
 		return Message(**data.get("result", None))
 
-	# https://core.telegram.org/bots/api#setwebhook
-	def set_webhook(
+	# https://core.telegram.org/bots/api#senddocument
+	def send_document(
 			self,
-			url: str,
-			certificate: Optional[InputFile] = None,
-			ip_address: Optional[str] = None,
-			max_connections: Optional[int] = None,
-			allowed_updates: Optional[List[str]] = None,
-			drop_pending_updates: Optional[bool] = None
-	) -> bool:
-		params = _make_optional(locals(), (self, certificate))
+			chat_id: [int, str],
+			document: [InputFile, str],
+			thumb: Optional[Union[InputFile, str]] = None,
+			caption: Optional[str] = None,
+			parse_mode: Optional[str] = None,
+			caption_entities: Optional[List[MessageEntity]] = None,
+
+			disable_content_type_detection: Optional[bool] = None,
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None,
+	):
+		params = _make_optional(locals(), (self, document, caption_entities, thumb))
+		if caption_entities:
+			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
+
 		form = MultiPartForm()
 		form.write_params(params)
-		if certificate:
-			form.write_file(certificate, "certificate")
+		form.write_one_input(document, "document")
+		if thumb:
+			form.write_one_input(thumb, "thumb")
 
-		data = self.__make_multipart_request(form, "setWebhook")
-		return bool(data.get("result"))
+		data = self.__make_multipart_request(form, "sendDocument")
+		return Message(**data.get("result", None))
 
-	# https://core.telegram.org/bots/api#deletewebhook
-	def delete_webhook(self, drop_pending_updates: Optional[bool] = None) -> bool:
-		params = _make_optional({"drop_pending_updates": drop_pending_updates})
-		data = self.__make_request("deleteWebhook", params=params)
-		return bool(data.get("result"))
+	# https://core.telegram.org/bots/api#sendvideo
+	def send_video(
+			self,
+			chat_id: [int, str],
+			video: [InputFile, str],
+			thumb: Optional[Union[InputFile, str]] = None,
+			duration: Optional[int] = None,
+			width: Optional[int] = None,
+			height: Optional[int] = None,
 
-	# https://core.telegram.org/bots/api#getwebhookinfo
-	def get_webhook_info(self):
-		data = self.__make_request("getWebhookInfo", params={})
-		return WebhookInfo(**data.get("result"))
+			caption: Optional[str] = None,
+			parse_mode: Optional[str] = None,
+			caption_entities: Optional[List[MessageEntity]] = None,
 
-	# https://core.telegram.org/bots/api#getupdates
-	def get_updates(self, offset=None, limit=None, timeout=None, allowed_updates=None) -> List[Update]:
-		params = _make_optional(locals(), (self,))
-		data = self.__make_request("getUpdates", params=params)
-		update_list = data.get("result", None)
-		return [Update(**d) for d in update_list]
+			supports_streaming: Optional[bool] = None,
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None,
+	):
+		params = _make_optional(locals(), (self, video, caption_entities, thumb))
+		if caption_entities:
+			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
+
+		form = MultiPartForm()
+		form.write_params(params)
+		form.write_one_input(video, "video")
+		if thumb:
+			form.write_one_input(thumb, "thumb")
+
+		data = self.__make_multipart_request(form, "sendVideo")
+		return Message(**data.get("result", None))
+
+	# https://core.telegram.org/bots/api#sendanimation
+	def send_animation(
+			self,
+			chat_id: [int, str],
+			animation: [InputFile, str],
+			thumb: Optional[Union[InputFile, str]] = None,
+			duration: Optional[int] = None,
+			width: Optional[int] = None,
+			height: Optional[int] = None,
+
+			caption: Optional[str] = None,
+			parse_mode: Optional[str] = None,
+			caption_entities: Optional[List[MessageEntity]] = None,
+
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None,
+	):
+		params = _make_optional(locals(), (self, animation, caption_entities, thumb))
+		if caption_entities:
+			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
+
+		form = MultiPartForm()
+		form.write_params(params)
+		form.write_one_input(animation, "animation")
+		if thumb:
+			form.write_one_input(thumb, "thumb")
+
+		data = self.__make_multipart_request(form, "sendAnimation")
+		return Message(**data.get("result", None))
+
+	# https://core.telegram.org/bots/api#sendvoice
+	def send_voice(
+			self,
+			chat_id: [int, str],
+			voice: [InputFile, str],
+
+			caption: Optional[str] = None,
+			parse_mode: Optional[str] = None,
+			caption_entities: Optional[List[MessageEntity]] = None,
+
+			duration: Optional[int] = None,
+
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None,
+	):
+		params = _make_optional(locals(), (self, voice, caption_entities))
+		if caption_entities:
+			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
+
+		form = MultiPartForm()
+		form.write_params(params)
+		form.write_one_input(voice, "voice")
+
+		data = self.__make_multipart_request(form, "sendVoice")
+		return Message(**data.get("result", None))
+
+	# https://core.telegram.org/bots/api#sendvideonote
+	def send_video_note(
+			self,
+			chat_id: [int, str],
+			video_note: [InputFile, str],
+
+			duration: Optional[int] = None,
+			length: Optional[int] = None,
+
+			thumb: Optional[Union[InputFile, str]] = None,
+
+			caption: Optional[str] = None,
+			parse_mode: Optional[str] = None,
+			caption_entities: Optional[List[MessageEntity]] = None,
+
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None,
+	):
+		params = _make_optional(locals(), (self, video_note, caption_entities, thumb))
+		if caption_entities:
+			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
+
+		form = MultiPartForm()
+		form.write_params(params)
+		form.write_one_input(video_note, "video_note")
+		if thumb:
+			form.write_one_input(thumb, "thumb")
+
+		data = self.__make_multipart_request(form, "sendVideoNote")
+		return Message(**data.get("result", None))
 
 	# https://core.telegram.org/bots/api#sendmediagroup
 	def send_media_group(
@@ -1367,12 +1550,208 @@ class API:
 		data = self.__make_multipart_request(form, "sendMediaGroup")
 		return [Message(**d) for d in data.get("result", None)]
 
+	# https://core.telegram.org/bots/api#sendlocation
+	def send_location(
+			self,
+			chat_id: [int, str],
+			latitude: float,
+			longitude: float,
+			horizontal_accuracy: Optional[float] = None,
+			live_period: Optional[int] = None,
+			heading: Optional[int] = None,
+			proximity_alert_radius: Optional[int] = None,
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None
+	) -> MessageId:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("sendLocation", params=params)
+		return MessageId(**data.get("result"))
+
+	# https://core.telegram.org/bots/api#editmessagelivelocation
+	def edit_message_live_location(
+			self,
+			latitude: float,
+			longitude: float,
+			chat_id: Optional[Union[int, str]] = None,
+			message_id: Optional[int] = None,
+			inline_message_id: Optional[str] = None,
+			horizontal_accuracy: Optional[float] = None,
+			heading: Optional[int] = None,
+			proximity_alert_radius: Optional[int] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None
+	) -> [MessageId, bool]:
+		params = _make_optional(locals(), (self,))
+		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
+		data = self.__make_request("editMessageLiveLocation", params=params)
+		result = bool(data.get("result")) if inline_message_id else MessageId(**data.get("result"))
+		return result
+
+	# https://core.telegram.org/bots/api#stopmessagelivelocation
+	def stop_message_live_location(
+			self,
+			chat_id: Optional[Union[int, str]] = None,
+			message_id: Optional[int] = None,
+			inline_message_id: Optional[str] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None
+	) -> [MessageId, bool]:
+		params = _make_optional(locals(), (self,))
+		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
+		data = self.__make_request("stopMessageLiveLocation", params=params)
+		result = bool(data.get("result")) if inline_message_id else MessageId(**data.get("result"))
+		return result
+
+	# https://core.telegram.org/bots/api#sendvenue
+	def send_venue(
+			self,
+			chat_id: [int, str],
+			latitude: float,
+			longitude: float,
+			title: str,
+			address: str,
+			foursquare_id: Optional[str] = None,
+			foursquare_type: Optional[str] = None,
+			google_place_id: Optional[str] = None,
+			google_place_type: Optional[str] = None,
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None
+	) -> MessageId:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("sendVenue", params=params)
+		return MessageId(**data.get("result"))
+
+	# https://core.telegram.org/bots/api#sendcontact
+	def send_contact(
+			self,
+			chat_id: [int, str],
+			phone_number: str,
+			first_name: str,
+			last_name: Optional[str] = None,
+			vcard: Optional[str] = None,
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None
+	) -> MessageId:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("sendContact", params=params)
+		return MessageId(**data.get("result"))
+
+	# https://core.telegram.org/bots/api#sendcontact
+	def send_poll(
+			self,
+			chat_id: [int, str],
+			question: str,
+			options: List[str],
+			is_anonymous: Optional[bool] = None,
+			type_: Optional[str] = None,
+			allows_multiple_answers: Optional[bool] = None,
+			correct_option_id: Optional[int] = None,
+			explanation: Optional[str] = None,
+			explanation_parse_mode: Optional[str] = None,
+			explanation_entities: Optional[List[MessageEntity]] = None,
+			open_period: Optional[int] = None,
+			close_date: Optional[int] = None,
+			is_closed: Optional[bool] = None,
+
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None
+	) -> MessageId:
+		params = _make_optional(locals(), (self, type_))
+		params["type"] = type_
+		if explanation_entities:
+			params["explanation_entities"] = json.dumps([e.serialize() for e in explanation_entities])
+		data = self.__make_request("sendPoll", params=params)
+		return MessageId(**data.get("result"))
+
+	# https://core.telegram.org/bots/api#senddice
+	def send_dice(
+			self,
+			chat_id: [int, str],
+			emoji: Optional[str] = None,
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[_KeyboardMarkup] = None
+	) -> MessageId:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("sendDice", params=params)
+		return MessageId(**data.get("result"))
+
+	# https://core.telegram.org/bots/api#sendchataction
+	def send_chat_action(
+			self,
+			chat_id: [int, str],
+			action: Optional[str] = None,
+	) -> bool:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("sendChatAction", params=params)
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#getuserprofilephotos
+	def get_user_profile_photos(
+			self,
+			user_id: int,
+			offset: Optional[int] = None,
+			limit: Optional[int] = None,
+	) -> UserProfilePhotos:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("getUserProfilePhotos", params=params)
+		return UserProfilePhotos(**data.get("result"))
+
+	# https://core.telegram.org/bots/api#getfile
+	def get_file(self, file_id: str) -> File:
+		data = self.__make_request("getFile", params={"file_id": file_id})
+		return File(**data.get("result"))
+
+	# https://core.telegram.org/bots/api#kickchatmember
+	def kick_chat_member(self, chat_id: [int, str], user_id: int, until_date: Optional[int] = None) -> bool:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("kickChatMember", params=params)
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#unbanchatmember
+	def unban_chat_member(self, chat_id: [int, str], user_id: int, only_if_banned: Optional[bool] = None) -> bool:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("unbanChatMember", params=params)
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#restrictchatmember
+	def restrict_chat_member(
+			self,
+			chat_id: [int, str],
+			user_id: int,
+			permissions: ChatPermissions,
+			until_date: Optional[int] = None
+	) -> bool:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("restrictChatMember", params=params)
+		return bool(data.get("result"))
+
 	# https://core.telegram.org/bots/api#getchatadministrators
 	def get_chat_administrators(self, chat_id: [int, str]) -> List[ChatMember]:
 		params = {"chat_id": chat_id}
 		data = self.__make_request("getChatAdministrators", params=params)
 		result_list = data.get("result", None)
 		return [ChatMember(**d) for d in result_list]
+
+	# https://core.telegram.org/bots/api#answercallbackquery
+	def answer_callback_query(
+			self,
+			callback_query_id: str,
+			text: Optional[str] = None,
+			show_alert: Optional[bool] = None,
+			url: Optional[str] = None,
+			cache_time: Optional[int] = None
+	) -> bool:
+		params = _make_optional(locals(), (self,))
+		data = self.__make_request("answerCallbackQuery", params=params)
+		return bool(data.get("result"))
 
 	# https://core.telegram.org/bots/api#answerinlinequery
 	def answer_inline_query(
@@ -1396,7 +1775,7 @@ class API:
 		resp = form.make_request(self.__host, url)
 		return self.__process_response(resp)
 
-	def __make_request(self, api_method: str, method="POST", params: Optional[dict] = {}):
+	def __make_request(self, api_method: str, method="POST", params: Optional[dict] = None):
 		url = self.__get_url(api_method)
 		params = {k: json.dumps(v.serialize()) if hasattr(v, "serialize") else v for k, v in params.items()}
 		params = urlencode(params)
@@ -1425,15 +1804,3 @@ class API:
 		data = resp.read()
 		parsed_data = json.loads(data)
 		return parsed_data
-
-	def answer_callback_query(
-			self,
-			callback_query_id: str,
-			text: Optional[str] = None,
-			show_alert: Optional[bool] = None,
-			url: Optional[str] = None,
-			cache_time: Optional[int] = None
-	) -> bool:
-		params = _make_optional(locals(), (self,))
-		data = self.__make_request("answerCallbackQuery", params=params)
-		return bool(data.get("result"))
