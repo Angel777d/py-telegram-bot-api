@@ -6,39 +6,8 @@ import os
 import stat
 from enum import Enum
 from io import BytesIO
-from typing import List, Optional, Tuple, KeysView, Any, Union
+from typing import List, Optional, Tuple, Any, Union
 from urllib.parse import urlencode
-
-
-# https://core.telegram.org/bots/api#messageentity
-class MessageEntityType(Enum):
-	MENTION = "mention"  # “mention” (@username),
-	HASHTAG = "hashtag"  # “hashtag” (#hashtag),
-	CASHTAG = "cashtag"  # “cashtag” ($USD),
-	BOT_COMMAND = "bot_command"  # “bot_command” (/start@jobs_bot),
-	URL = "url"  # “url” (https://telegram.org),
-	EMAIL = "email"  # “email” (do-not-reply@telegram.org),
-	PHONE_NUMBER = "phone_number"  # “phone_number” (+1-212-555-0123),
-	BOLD = "bold"  # “bold” (bold text),
-	ITALIC = "italic"  # “italic” (italic text),
-	UNDERLINE = "underline"  # “underline” (underlined text),
-	STRIKETHROUGH = "strikethrough"  # “strikethrough” (strikethrough text),
-	CODE = "code"  # “code” (monowidth string),
-	PRE = "pre"  # “pre” (monowidth block),
-	TEXT_LINK = "text_link"  # “text_link” (for clickable text URLs),
-	TEXT_MENTION = "text_mention"  # “text_mention” (for users without usernames)
-
-	WRONG = "wrong"
-
-
-# https://core.telegram.org/bots/api#chat
-class ChatType(Enum):
-	PRIVATE = "private"
-	GROUP = "group"
-	SUPERGROUP = "supergroup"
-	CHANNEL = "channel"
-
-	WRONG = "wrong"
 
 
 def _get_public(obj: Any):
@@ -59,8 +28,38 @@ def __ch_list(target, k, v):
 
 
 def __ch_obj(target, k, v):
-	return target.get_fields_map().get(k, _DefaultFieldObject)(**v) if type(v) is dict else target.get_simple_field(k,
-																													v)
+	return target.fields_map().get(k, _DefaultFieldObject)(**v) if type(v) is dict else target.parse_field(k, v)
+
+
+# https://core.telegram.org/bots/api#messageentity
+class MessageEntityType(Enum):
+	MENTION = "mention"
+	HASHTAG = "hashtag"
+	CASHTAG = "cashtag"
+	BOT_COMMAND = "bot_command"
+	URL = "url"
+	EMAIL = "email"
+	PHONE_NUMBER = "phone_number"
+	BOLD = "bold"
+	ITALIC = "italic"
+	UNDERLINE = "underline"
+	STRIKETHROUGH = "strikethrough"
+	CODE = "code"
+	PRE = "pre"
+	TEXT_LINK = "text_link"
+	TEXT_MENTION = "text_mention"
+
+	WRONG = "wrong"
+
+
+# https://core.telegram.org/bots/api#chat
+class ChatType(Enum):
+	PRIVATE = "private"
+	GROUP = "group"
+	SUPERGROUP = "supergroup"
+	CHANNEL = "channel"
+
+	WRONG = "wrong"
 
 
 # service class
@@ -316,18 +315,12 @@ class _DefaultFieldObject:
 	def __repr__(self):
 		return f'[{self.__class__.__name__}] data: {self.__dict__}'
 
-	def get_fields(self) -> KeysView[str]:
-		return self.__data.keys()
-
-	def get_source(self) -> dict:
-		return self.__data
-
 	@staticmethod
-	def get_simple_field(name, value):
+	def parse_field(name, value):
 		return value
 
 	@staticmethod
-	def get_fields_map():
+	def fields_map():
 		return {
 			"message": Message,
 			"entities": MessageEntity,
@@ -874,12 +867,13 @@ class Chat(_DefaultFieldObject):
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 	@staticmethod
-	def get_simple_field(name, value):
+	def parse_field(name, value):
 		if name == "type":
 			return ChatType(value)
 		return value
 
 
+# https://core.telegram.org/bots/api#messageentity
 class MessageEntity(_DefaultFieldObject, _Serializable):
 	def __init__(self, **kwargs):
 		self.type: MessageEntityType = MessageEntityType.WRONG
@@ -896,7 +890,7 @@ class MessageEntity(_DefaultFieldObject, _Serializable):
 		return text[self.offset:self.offset + self.length]
 
 	@staticmethod
-	def get_simple_field(name, value):
+	def parse_field(name, value):
 		if name == "type":
 			return MessageEntityType(value)
 		return value
@@ -973,8 +967,6 @@ class Message(_DefaultFieldObject):
 
 class Update(_DefaultFieldObject):
 	def __init__(self, update_id: int, **kwargs):
-		self.__data = kwargs
-
 		self.update_id: int = update_id
 		self.message: Optional[Message] = None
 		self.edited_message: Optional[Message] = None
@@ -992,9 +984,6 @@ class Update(_DefaultFieldObject):
 		self.update_types: Tuple[str] = keys
 
 		_DefaultFieldObject.__init__(self, **kwargs)
-
-	def __repr__(self):
-		return f'[Update] update_id: {self.update_id}, type: {self.update_types}, value: {self.__data.values()}'
 
 
 # Inline classes
