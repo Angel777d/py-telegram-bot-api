@@ -71,18 +71,10 @@ class _Serializable:
 
 # https://core.telegram.org/bots/api#inputfile
 class InputFile(_Serializable):
-	class InputType(Enum):
-		FILE = 0
-		URL = 1
-		TELEGRAM = 2
-
-	def __init__(self, type_: InputType, value: Union[int, str]) -> None:
+	def __init__(self, path: str) -> None:
 		super().__init__()
-		self.type = type_
-		self.value = value
-		self.file_name = value
-		if type_ == InputFile.InputType.FILE:
-			self.file_name = value.split('/')[-1]
+		self.value: str = path
+		self.file_name: str = path.split('/')[-1]
 
 	def serialize(self):
 		raise NotImplementedError("serialize method must be implemented")
@@ -95,21 +87,21 @@ class MultiPartForm:
 		self.buff = BytesIO()
 
 	def write_params(self, params):
-		boundary = self.boundary
 		for key, value in params.items():
-			self._write_str(f'--{boundary}\r\n')
-			self._write_str(f'Content-Disposition: form-data; name="{key}"\r\n')
-			self._write_str('Content-Type: text/plain; charset=utf-8\r\n')
-			self._write_str('\r\n')
-			if value is None:
-				value = ""
-			self._write_str(f'{value}\r\n')
+			self.write_one_param(key, value)
+
+	def write_one_param(self, key, value):
+		self._write_str(f'--{self.boundary}\r\n')
+		self._write_str(f'Content-Disposition: form-data; name="{key}"\r\n')
+		self._write_str('Content-Type: text/plain; charset=utf-8\r\n')
+		self._write_str('\r\n')
+		if value is None:
+			value = ""
+		self._write_str(f'{value}\r\n')
 
 	def write_one_input(self, input_file: Union[InputFile, str], field: str):
 		if type(input_file) is str:
 			self.write_params({field: input_file})
-		elif input_file.type != InputFile.InputType.FILE:
-			self.write_params({field: input_file.value})
 		else:
 			self.write_file(input_file, field)
 
@@ -212,10 +204,8 @@ class InputMedia(_Serializable, _Caption):
 	def serialize(self):
 		if type(self.media) == str:
 			media = self.media
-		elif self.media.type == InputFile.InputType.FILE:
-			media = f'attach://{self.media.file_name}'
 		else:
-			media = self.media.value
+			media = f'attach://{self.media.file_name}'
 
 		return _make_optional({
 			"type": self.type,
@@ -1642,9 +1632,7 @@ class API:
 		for m in media:
 			if type(m.media) is str:
 				continue
-			input_file: InputFile = m.media
-			if input_file.type == InputFile.InputType.FILE:
-				form.write_file(input_file)
+			form.write_file(m.media)
 		form.write_params(params)
 
 		data = self.__make_multipart_request(form, "sendMediaGroup")
@@ -2032,7 +2020,7 @@ class API:
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
 		params = _make_optional(locals(), (self,))
-		assert media.media.type != InputFile.InputType.FILE, "can't upload file while edit message"
+		assert type(media.media) == str, "can't upload file while edit message"
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
 		data = self.__make_request("editMessageMedia", params)
 		return Message(**data.get("result"))
