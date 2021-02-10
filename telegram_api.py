@@ -14,7 +14,7 @@ def _get_public(obj: Any):
 	return {name: getattr(obj, name) for name in vars(obj) if not name.startswith('_')}
 
 
-def _make_optional(params: dict, exclude=()):
+def _make_optional(params: dict, *exclude):
 	return {k: v for k, v in params.items() if v is not None and v not in exclude}
 
 
@@ -28,7 +28,7 @@ def __ch_list(target, k, v):
 
 
 def __ch_obj(target, k, v):
-	return target.fields_map().get(k, _DefaultFieldObject)(**v) if type(v) is dict else target.parse_field(k, v)
+	return FIELDS.get(k, _DefaultFieldObject)(**v) if type(v) is dict else target.parse_field(k, v)
 
 
 # https://core.telegram.org/bots/api#messageentity
@@ -77,79 +77,6 @@ class InputFile(_Serializable):
 
 	def serialize(self):
 		raise NotImplementedError("serialize method must be implemented")
-
-
-# service class
-class MultiPartForm:
-	def __init__(self):
-		self.boundary = binascii.hexlify(os.urandom(16)).decode('ascii')
-		self.buff = BytesIO()
-
-	def write_params(self, params):
-		for key, value in params.items():
-			self.write_one_param(key, value)
-
-	def write_one_param(self, key, value):
-		self._write_str(f'--{self.boundary}\r\n')
-		self._write_str(f'Content-Disposition: form-data; name="{key}"\r\n')
-		self._write_str('Content-Type: text/plain; charset=utf-8\r\n')
-		self._write_str('\r\n')
-		if value is None:
-			value = ""
-		self._write_str(f'{value}\r\n')
-
-	def write_one_input(self, input_file: Union[InputFile, str], field: str):
-		if type(input_file) is str:
-			self.write_params({field: input_file})
-		else:
-			self.write_file(input_file, field)
-
-	def write_file(self, input_file: InputFile, field: str = None):
-		boundary = self.boundary
-
-		path = input_file.value
-		file_name = input_file.file_name
-		field = field or file_name
-		with open(path, mode="rb") as file:
-			file_size = os.fstat(file.fileno())[stat.ST_SIZE]
-			content_type = mimetypes.guess_type(file_name)[0] or 'application/octet-stream'
-
-			self._write_str(f'--{boundary}\r\n')
-			self._write_str(f'Content-Disposition: form-data; name="{field}"; filename="{file_name}"\r\n')
-			self._write_str(f'Content-Type: {content_type}; charset=utf-8\r\n')
-			self._write_str(f'Content-Length: {file_size}\r\n')
-
-			file.seek(0)
-			self.buff.write(b'\r\n')
-			self.buff.write(file.read())
-			self.buff.write(b'\r\n')
-			print("[Req]", "\r\n...file data...\r\n", end="")
-
-	def _write_str(self, value: str):
-		print("[Req]", value, end="")
-		self.buff.write(value.encode('utf-8'))
-
-	def get_data(self):
-		self._write_str(f'--{self.boundary}--\r\n')
-		return self.boundary, self.buff.getvalue()
-
-	def make_request(self, host, url):
-		boundary, buffer = self.get_data()
-		buffer_size = len(buffer)
-
-		conn = http.client.HTTPSConnection(host)
-		conn.connect()
-		conn.putrequest("POST", url)
-		conn.putheader('Connection', 'Keep-Alive')
-		conn.putheader('Cache-Control', 'no-cache')
-		conn.putheader('Accept', 'application/json')
-		conn.putheader('Content-type', f'multipart/form-data; boundary={boundary}')
-		conn.putheader('Content-length', str(buffer_size))
-		conn.endheaders()
-
-		conn.send(buffer)
-
-		return conn.getresponse()
 
 
 # part class
@@ -223,9 +150,8 @@ class _InputThumb(InputMedia):
 
 	def serialize(self):
 		result = super().serialize()
-		result.update(_make_optional({
-			"thumb": self.thumb.serialize() if self.thumb else None
-		}))
+		if self.thumb:
+			result["thumb"] = self.thumb.serialize()
 		return result
 
 
@@ -318,33 +244,6 @@ class _DefaultFieldObject:
 	@staticmethod
 	def parse_field(name, value):
 		return value
-
-	@staticmethod
-	def fields_map():
-		return {
-			"message": Message,
-			"entities": MessageEntity,
-			"caption_entities": MessageEntity,
-			"reply_to_message": Message,
-			"chat": Chat,
-			"from": User,
-			"user": User,
-			"mask_position": MaskPosition,
-			"thumb": PhotoSize,
-			"anim": Video,
-			"animation": Animation,
-			"audio": Audio,
-			"document": Document,
-			"photo": PhotoSize,
-			"sticker": Sticker,
-			"video": Video,
-			"video_note": VideoNote,
-			"voice": Voice,
-			"inline_query": InlineQuery,
-			"photos": PhotoSize,
-			"option": PollOption,
-			"stickers": Sticker,
-		}.copy()
 
 
 # https://core.telegram.org/bots/api#botcommand
@@ -469,26 +368,6 @@ class Contact(_DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
-class ShippingQuery(_DefaultFieldObject):
-	pass
-
-
-class PreCheckoutQuery(_DefaultFieldObject):
-	pass
-
-
-class PassportData(_DefaultFieldObject):
-	pass
-
-
-class SuccessfulPayment(_DefaultFieldObject):
-	pass
-
-
-class Invoice(_DefaultFieldObject):
-	pass
-
-
 # https://core.telegram.org/bots/api#location
 class Location(_Location, _DefaultFieldObject):
 	def __init__(self, **kwargs):
@@ -609,21 +488,15 @@ class InlineKeyboardButton(_Serializable):
 		self.pay: Optional[bool] = pay
 
 	def serialize(self):
-		result = _make_optional(_get_public(self), (self.callback_game,))
+		result = _make_optional(_get_public(self), self.callback_game)
 		if self.callback_game:
 			result["callback_game"] = self.callback_game.serialize()
 		assert len(result) == 2, "[InlineKeyboardButton] You must use exactly one of the optional fields"
 		return result
 
 
-# service class
-class _KeyboardMarkup(_Serializable):
-	def serialize(self):
-		raise NotImplementedError("serialize method must be implemented")
-
-
 # https://core.telegram.org/bots/api#inlinekeyboardmarkup
-class InlineKeyboardMarkup(_KeyboardMarkup):
+class InlineKeyboardMarkup(_Serializable):
 	def __init__(self, inline_keyboard: List[List[InlineKeyboardButton]]):
 		self.inline_keyboard: List[List[InlineKeyboardButton]] = inline_keyboard
 
@@ -634,7 +507,7 @@ class InlineKeyboardMarkup(_KeyboardMarkup):
 
 
 # https://core.telegram.org/bots/api#replykeyboardmarkup
-class ReplyKeyboardMarkup(_KeyboardMarkup):
+class ReplyKeyboardMarkup(_Serializable):
 	def __init__(
 			self,
 			keyboard: List[List[InlineKeyboardButton]],
@@ -655,7 +528,7 @@ class ReplyKeyboardMarkup(_KeyboardMarkup):
 
 
 # https://core.telegram.org/bots/api#replykeyboardmarkup
-class ReplyKeyboardRemove(_KeyboardMarkup):
+class ReplyKeyboardRemove(_Serializable):
 	def __init__(self, remove_keyboard: bool = True, selective: Optional[bool] = None):
 		self.remove_keyboard: bool = remove_keyboard
 		self.selective: Optional[bool] = selective
@@ -665,7 +538,7 @@ class ReplyKeyboardRemove(_KeyboardMarkup):
 
 
 # https://core.telegram.org/bots/api#forcereply
-class ForceReply(_KeyboardMarkup):
+class ForceReply(_Serializable):
 	def __init__(self, force_reply: bool = True, selective: Optional[bool] = None):
 		self.force_reply: bool = force_reply
 		self.selective: Optional[bool] = selective
@@ -1294,15 +1167,259 @@ class InlineQueryResultCachedAudio(InlineQueryResult, _Caption):
 		self.audio_file_id: str = audio_file_id
 
 
+# https://core.telegram.org/bots/api#labeledprice
+class LabeledPrice:
+	def __init__(self, label: str, amount: int):
+		self.label: str = label
+		self.amount: int = amount
+
+
+# https://core.telegram.org/bots/api#invoice
+class Invoice(_DefaultFieldObject):
+	def __init__(self, title: str, description: str, start_parameter: str, currency: str, total_amount: int, **kwargs):
+		self.title: str = title
+		self.description: str = description
+		self.start_parameter: str = start_parameter
+		self.currency: str = currency
+		self.total_amount: int = total_amount
+		super().__init__(**kwargs)
+
+
+class ShippingAddress(_DefaultFieldObject):
+	def __init__(
+			self,
+			country_code: str,
+			state: str,
+			city: str,
+			street_line1: str,
+			street_line2: str,
+			post_code: str,
+			**kwargs):
+		self.country_code: str = country_code
+		self.state: str = state
+		self.city: str = city
+		self.street_line1: str = street_line1
+		self.street_line2: str = street_line2
+		self.post_code: str = post_code
+		super().__init__(**kwargs)
+
+
+class OrderInfo(_DefaultFieldObject):
+	def __init__(self, **kwargs):
+		self.name: Optional[str] = None
+		self.phone_number: Optional[str] = None
+		self.email: Optional[str] = None
+		self.shipping_address: Optional[ShippingAddress] = None
+
+		super().__init__(**kwargs)
+
+
+class ShippingOption(_DefaultFieldObject):
+	def __init__(self, id_: str, title: str, prices: List[LabeledPrice], **kwargs):
+		self.id: str = id_
+		self.title: str = title
+		self.prices: List[LabeledPrice] = prices
+		super().__init__(**kwargs)
+
+
+class SuccessfulPayment(_DefaultFieldObject):
+
+	def __init__(
+			self,
+			currency: str,
+			total_amount: int,
+			invoice_payload: str,
+			telegram_payment_charge_id: str,
+			provider_payment_charge_id: str,
+			**kwargs):
+		self.currency: str = currency
+		self.total_amount: int = total_amount
+		self.invoice_payload: str = invoice_payload
+		self.shipping_option_id: Optional[str] = None
+		self.order_info: Optional[OrderInfo] = None
+		self.telegram_payment_charge_id: str = telegram_payment_charge_id
+		self.provider_payment_charge_id: str = provider_payment_charge_id
+
+		super().__init__(**kwargs)
+
+
+class ShippingQuery(_DefaultFieldObject):
+	def __init__(self, invoice_payload: str, shipping_address: ShippingAddress, **kwargs):
+		self.id: str = ""
+		self.from_user: User = User()
+		self.invoice_payload: str = invoice_payload
+		self.shipping_address: ShippingAddress = shipping_address
+		super().__init__(**kwargs)
+
+
+class PreCheckoutQuery(_DefaultFieldObject):
+	def __init__(self, currency: str, total_amount: int, invoice_payload: str, **kwargs):
+		self.id: str = ""
+		self.from_user: User = User()
+		self.currency: str = currency
+		self.total_amount: int = total_amount
+		self.invoice_payload: str = invoice_payload
+		self.shipping_option_id: Optional[str] = None
+		self.order_info: Optional[OrderInfo] = None
+		super().__init__(**kwargs)
+
+
+class EncryptedPassportElement(_DefaultFieldObject):
+	def __init__(self, data: str, **kwargs):
+		self.type: str = ""  # type is reserved word
+		self.data: str = data
+		self.phone_number: Optional[str] = None
+		self.email: Optional[str] = None
+		self.files: Optional[List[PassportFile]] = None
+		self.front_side: Optional[PassportFile] = None
+		self.reverse_side: Optional[PassportFile] = None
+		self.selfie: Optional[PassportFile] = None
+		self.translation: Optional[List[PassportFile]] = None
+		self.hash: str = ""  # hash is reserved word
+		super().__init__(**kwargs)
+
+
+class EncryptedCredentials(_DefaultFieldObject):
+
+	def __init__(self, data: str, secret: str, **kwargs):
+		self.data: str = data
+		self.hash: str = ""  # hash is reserved word
+		self.secret: str = secret
+		super().__init__(**kwargs)
+
+
+class PassportData(_DefaultFieldObject):
+	def __init__(self, data: List[EncryptedPassportElement], credentials: EncryptedCredentials, **kwargs):
+		self.data: List[EncryptedPassportElement] = data
+		self.credentials: EncryptedCredentials = credentials
+		super().__init__(**kwargs)
+
+
+class PassportFile(_DefaultFieldObject):
+	def __init__(self, file_id: str, file_unique_id: str, file_size: int, file_date: int, **kwargs):
+		self.file_id: str = file_id
+		self.file_unique_id: str = file_unique_id
+		self.file_size: int = file_size
+		self.file_date: int = file_date
+		super().__init__(**kwargs)
+
+
+FIELDS = {
+	"message": Message,
+	"entities": MessageEntity,
+	"caption_entities": MessageEntity,
+	"reply_to_message": Message,
+	"chat": Chat,
+	"from": User,
+	"user": User,
+	"mask_position": MaskPosition,
+	"thumb": PhotoSize,
+	"anim": Video,
+	"animation": Animation,
+	"audio": Audio,
+	"document": Document,
+	"photo": PhotoSize,
+	"sticker": Sticker,
+	"video": Video,
+	"video_note": VideoNote,
+	"voice": Voice,
+	"inline_query": InlineQuery,
+	"photos": PhotoSize,
+	"option": PollOption,
+	"stickers": Sticker,
+	"shipping_address": ShippingAddress,
+	"prices": LabeledPrice,
+	"order_info": LabeledPrice,
+	"data": EncryptedPassportElement,
+	"credentials": EncryptedCredentials,
+	"files": PassportFile,
+	"front_side": PassportFile,
+	"reverse_side": PassportFile,
+	"selfie": PassportFile,
+	"translation": PassportFile,
+}
+
+
 # API METHODS
 class API:
+	class MultiPartForm:
+		def __init__(self):
+			self.boundary = binascii.hexlify(os.urandom(16)).decode('ascii')
+			self.buff = BytesIO()
+
+		def write_params(self, params):
+			for key, value in params.items():
+				self.write_one_param(key, value)
+
+		def write_one_param(self, key, value):
+			self._write_str(f'--{self.boundary}\r\n')
+			self._write_str(f'Content-Disposition: form-data; name="{key}"\r\n')
+			self._write_str('Content-Type: text/plain; charset=utf-8\r\n')
+			self._write_str('\r\n')
+			if value is None:
+				value = ""
+			self._write_str(f'{value}\r\n')
+
+		def write_one_input(self, input_file: Union[InputFile, str], field: str):
+			if type(input_file) is str:
+				self.write_params({field: input_file})
+			else:
+				self.write_file(input_file, field)
+
+		def write_file(self, input_file: InputFile, field: str = None):
+			boundary = self.boundary
+
+			path = input_file.value
+			file_name = input_file.file_name
+			field = field or file_name
+			with open(path, mode="rb") as file:
+				file_size = os.fstat(file.fileno())[stat.ST_SIZE]
+				content_type = mimetypes.guess_type(file_name)[0] or 'application/octet-stream'
+
+				self._write_str(f'--{boundary}\r\n')
+				self._write_str(f'Content-Disposition: form-data; name="{field}"; filename="{file_name}"\r\n')
+				self._write_str(f'Content-Type: {content_type}; charset=utf-8\r\n')
+				self._write_str(f'Content-Length: {file_size}\r\n')
+
+				file.seek(0)
+				self.buff.write(b'\r\n')
+				self.buff.write(file.read())
+				self.buff.write(b'\r\n')
+				print("[Req]", "\r\n...file data...\r\n", end="")
+
+		def _write_str(self, value: str):
+			print("[Req]", value, end="")
+			self.buff.write(value.encode('utf-8'))
+
+		def get_data(self):
+			self._write_str(f'--{self.boundary}--\r\n')
+			return self.boundary, self.buff.getvalue()
+
+		def make_request(self, host, url):
+			boundary, buffer = self.get_data()
+			buffer_size = len(buffer)
+
+			conn = http.client.HTTPSConnection(host)
+			conn.connect()
+			conn.putrequest("POST", url)
+			conn.putheader('Connection', 'Keep-Alive')
+			conn.putheader('Cache-Control', 'no-cache')
+			conn.putheader('Accept', 'application/json')
+			conn.putheader('Content-type', f'multipart/form-data; boundary={boundary}')
+			conn.putheader('Content-length', str(buffer_size))
+			conn.endheaders()
+
+			conn.send(buffer)
+
+			return conn.getresponse()
+
 	def __init__(self, token: str, host: str = "api.telegram.org"):
 		self.__host = host
 		self.__token = token
 
 	# https://core.telegram.org/bots/api#getupdates
 	def get_updates(self, offset=None, limit=None, timeout=None, allowed_updates=None) -> List[Update]:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("getUpdates", params=params)
 		update_list = data.get("result", None)
 		return [Update(**d) for d in update_list]
@@ -1317,8 +1434,8 @@ class API:
 			allowed_updates: Optional[List[str]] = None,
 			drop_pending_updates: Optional[bool] = None
 	) -> bool:
-		params = _make_optional(locals(), (self, certificate))
-		form = MultiPartForm()
+		params = _make_optional(locals(), self, certificate)
+		form = API.MultiPartForm()
 		form.write_params(params)
 		if certificate:
 			form.write_file(certificate, "certificate")
@@ -1355,15 +1472,19 @@ class API:
 	# https://core.telegram.org/bots/api#sendmessage
 	def send_message(
 			self,
-			chat_id: int,
+			chat_id: Union[int, str],
 			text: str,
-			parse_mode: str = None,
-			disable_web_page_preview: bool = None,
-			disable_notification: bool = None,
-			reply_to_message_id: int = None,
-			reply_markup=None
+			parse_mode: Optional[str] = None,
+			entities: Optional[List[MessageEntity]] = None,
+			disable_web_page_preview: Optional[bool] = None,
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
 	) -> Message:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("sendMessage", params=params)
 		return Message(**data.get("result"))
 
@@ -1375,7 +1496,7 @@ class API:
 			message_id: int,
 			disable_notification: Optional[bool] = None
 	) -> Message:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("forwardMessage", params=params)
 		return Message(**data.get("result"))
 
@@ -1391,9 +1512,11 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
 	) -> MessageId:
-		params = _make_optional(locals(), (self, caption_entities))
+		params = _make_optional(locals(), self, caption_entities)
 		if caption_entities:
 			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
 
@@ -1411,13 +1534,16 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
+
 	):
-		params = _make_optional(locals(), (self, photo, caption_entities))
+		params = _make_optional(locals(), self, photo, caption_entities)
 		if caption_entities:
 			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
 
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(photo, "photo")
 
@@ -1437,11 +1563,11 @@ class API:
 			title: Optional[str] = None,
 			thumb: Optional[Union[InputFile, str]] = None
 	):
-		params = _make_optional(locals(), (self, audio, caption_entities, thumb))
+		params = _make_optional(locals(), self, audio, caption_entities, thumb)
 		if caption_entities:
 			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
 
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(audio, "audio")
 		if thumb:
@@ -1464,13 +1590,15 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None,
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
 	):
-		params = _make_optional(locals(), (self, document, caption_entities, thumb))
+		params = _make_optional(locals(), self, document, caption_entities, thumb)
 		if caption_entities:
 			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
 
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(document, "document")
 		if thumb:
@@ -1497,13 +1625,15 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None,
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
 	):
-		params = _make_optional(locals(), (self, video, caption_entities, thumb))
+		params = _make_optional(locals(), self, video, caption_entities, thumb)
 		if caption_entities:
 			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
 
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(video, "video")
 		if thumb:
@@ -1529,13 +1659,15 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None,
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
 	):
-		params = _make_optional(locals(), (self, animation, caption_entities, thumb))
+		params = _make_optional(locals(), self, animation, caption_entities, thumb)
 		if caption_entities:
 			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
 
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(animation, "animation")
 		if thumb:
@@ -1559,13 +1691,15 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None,
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
 	):
-		params = _make_optional(locals(), (self, voice, caption_entities))
+		params = _make_optional(locals(), self, voice, caption_entities)
 		if caption_entities:
 			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
 
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(voice, "voice")
 
@@ -1590,13 +1724,15 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None,
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
 	):
-		params = _make_optional(locals(), (self, video_note, caption_entities, thumb))
+		params = _make_optional(locals(), self, video_note, caption_entities, thumb)
 		if caption_entities:
 			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
 
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(video_note, "video_note")
 		if thumb:
@@ -1614,10 +1750,10 @@ class API:
 			reply_to_message_id: int = None,
 			allow_sending_without_reply: bool = None
 	):
-		params = _make_optional(locals(), (self, media))
+		params = _make_optional(locals(), self, media)
 		params["media"] = json.dumps([m.serialize() for m in media])
 
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		for m in media:
 			if type(m.media) is str:
 				continue
@@ -1640,9 +1776,12 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
+
 	) -> MessageId:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("sendLocation", params=params)
 		return MessageId(**data.get("result"))
 
@@ -1657,9 +1796,12 @@ class API:
 			horizontal_accuracy: Optional[float] = None,
 			heading: Optional[int] = None,
 			proximity_alert_radius: Optional[int] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
+
 	) -> Union[MessageId, bool]:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
 		data = self.__make_request("editMessageLiveLocation", params=params)
 		result = bool(data.get("result")) if inline_message_id else MessageId(**data.get("result"))
@@ -1671,9 +1813,12 @@ class API:
 			chat_id: Optional[Union[int, str]] = None,
 			message_id: Optional[int] = None,
 			inline_message_id: Optional[str] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
+
 	) -> Union[MessageId, bool]:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
 		data = self.__make_request("stopMessageLiveLocation", params=params)
 		result = bool(data.get("result")) if inline_message_id else MessageId(**data.get("result"))
@@ -1694,9 +1839,12 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
+
 	) -> MessageId:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("sendVenue", params=params)
 		return MessageId(**data.get("result"))
 
@@ -1711,9 +1859,12 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
+
 	) -> MessageId:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("sendContact", params=params)
 		return MessageId(**data.get("result"))
 
@@ -1737,9 +1888,12 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
+
 	) -> MessageId:
-		params = _make_optional(locals(), (self, type_))
+		params = _make_optional(locals(), self, type_)
 		params["type"] = type_
 		if explanation_entities:
 			params["explanation_entities"] = json.dumps([e.serialize() for e in explanation_entities])
@@ -1754,9 +1908,12 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
+
 	) -> MessageId:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("sendDice", params=params)
 		return MessageId(**data.get("result"))
 
@@ -1766,7 +1923,7 @@ class API:
 			chat_id: Union[int, str],
 			action: Optional[str] = None,
 	) -> bool:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("sendChatAction", params=params)
 		return bool(data.get("result"))
 
@@ -1777,7 +1934,7 @@ class API:
 			offset: Optional[int] = None,
 			limit: Optional[int] = None,
 	) -> UserProfilePhotos:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("getUserProfilePhotos", params=params)
 		return UserProfilePhotos(**data.get("result"))
 
@@ -1788,13 +1945,13 @@ class API:
 
 	# https://core.telegram.org/bots/api#kickchatmember
 	def kick_chat_member(self, chat_id: Union[int, str], user_id: int, until_date: Optional[int] = None) -> bool:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("kickChatMember", params=params)
 		return bool(data.get("result"))
 
 	# https://core.telegram.org/bots/api#unbanchatmember
 	def unban_chat_member(self, chat_id: Union[int, str], user_id: int, only_if_banned: Optional[bool] = None) -> bool:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("unbanChatMember", params=params)
 		return bool(data.get("result"))
 
@@ -1806,7 +1963,7 @@ class API:
 			permissions: ChatPermissions,
 			until_date: Optional[int] = None
 	) -> bool:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("restrictChatMember", params=params)
 		return bool(data.get("result"))
 
@@ -1825,7 +1982,7 @@ class API:
 			can_pin_messages: Optional[bool] = None,
 			can_promote_members: Optional[bool] = None
 	) -> bool:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("promoteChatMember", params=params)
 		return bool(data.get("result"))
 
@@ -1836,7 +1993,7 @@ class API:
 			user_id: int,
 			custom_title: str,
 	) -> bool:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("setChatAdministratorCustomTitle", params=params)
 		return bool(data.get("result"))
 
@@ -1860,7 +2017,7 @@ class API:
 			chat_id: Union[int, str],
 			photo: InputFile,
 	) -> bool:
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		form.write_params({"chat_id": chat_id})
 		form.write_one_input(photo, "photo")
 
@@ -1889,13 +2046,13 @@ class API:
 			message_id: int,
 			disable_notification: Optional[bool] = None
 	) -> bool:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("pinChatMessage", params)
 		return bool(data.get("result"))
 
 	# https://core.telegram.org/bots/api#unpinchatmessage
 	def unpin_chat_message(self, chat_id: Union[int, str], message_id: Optional[int]) -> bool:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("unpinChatMessage", params)
 		return bool(data.get("result"))
 
@@ -1948,7 +2105,7 @@ class API:
 			url: Optional[str] = None,
 			cache_time: Optional[int] = None
 	) -> bool:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("answerCallbackQuery", params=params)
 		return bool(data.get("result"))
 
@@ -1974,7 +2131,7 @@ class API:
 			disable_web_page_preview: Optional[bool] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
-		params = _make_optional(locals(), (self, entities))
+		params = _make_optional(locals(), self, entities)
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
 		if entities:
 			params["entities"] = [e.serialize() for e in entities]
@@ -1992,7 +2149,7 @@ class API:
 			caption_entities: Optional[List[MessageEntity]] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
-		params = _make_optional(locals(), (self, caption_entities))
+		params = _make_optional(locals(), self, caption_entities)
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
 		if caption_entities:
 			params["caption_entities"] = [e.serialize() for e in caption_entities]
@@ -2008,7 +2165,7 @@ class API:
 			inline_message_id: Optional[str] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		assert type(media.media) == str, "can't upload file while edit message"
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
 		data = self.__make_request("editMessageMedia", params)
@@ -2022,7 +2179,7 @@ class API:
 			inline_message_id: Optional[str] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
 		data = self.__make_request("editMessageReplyMarkup", params)
 		result = bool(data.get("result")) if inline_message_id else Message(**data.get("result"))
@@ -2035,7 +2192,7 @@ class API:
 			message_id: int,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Poll:
-		params = _make_optional(locals(), (self,))
+		params = _make_optional(locals(), self)
 		data = self.__make_request("stopPoll", params)
 		return Poll(**data.get("result"))
 
@@ -2052,10 +2209,13 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[_KeyboardMarkup] = None
+			reply_markup: Optional[Union[
+				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+			] = None
+
 	) -> Message:
-		params = _make_optional(locals(), (self, sticker))
-		form = MultiPartForm()
+		params = _make_optional(locals(), self, sticker)
+		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(sticker, "sticker")
 
@@ -2073,7 +2233,7 @@ class API:
 			user_id: int,
 			png_sticker: InputFile
 	) -> File:
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		form.write_params({"user_id": user_id})
 		form.write_one_input(png_sticker, "png_sticker")
 
@@ -2082,7 +2242,7 @@ class API:
 
 	def __stickers(self, method, params, png_sticker, tgs_sticker):
 		assert bool(png_sticker) ^ bool(tgs_sticker), "png_sticker or tgs_sticker must be set"
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		form.write_params(params)
 		if png_sticker:
 			form.write_one_input(png_sticker, "png_sticker")
@@ -2104,7 +2264,7 @@ class API:
 			contains_masks: Optional[bool] = None,
 			mask_position: Optional[MaskPosition] = None
 	) -> bool:
-		params = _make_optional(locals(), (self, png_sticker, tgs_sticker))
+		params = _make_optional(locals(), self, png_sticker, tgs_sticker)
 		return self.__stickers("createNewStickerSet", params, png_sticker, tgs_sticker)
 
 	# https://core.telegram.org/bots/api#addstickertoset
@@ -2117,7 +2277,7 @@ class API:
 			tgs_sticker: Optional[InputFile] = None,
 			mask_position: Optional[MaskPosition] = None
 	) -> bool:
-		params = _make_optional(locals(), (self, png_sticker, tgs_sticker))
+		params = _make_optional(locals(), self, png_sticker, tgs_sticker)
 		return self.__stickers("addStickerToSet", params, png_sticker, tgs_sticker)
 
 	# https://core.telegram.org/bots/api#setstickerpositioninset
@@ -2137,7 +2297,7 @@ class API:
 			user_id: int,
 			thumb: Optional[Union[InputFile, str]]
 	) -> File:
-		form = MultiPartForm()
+		form = API.MultiPartForm()
 		form.write_params({"name": name, "user_id": user_id})
 		if thumb:
 			form.write_one_input(thumb, "thumb")
@@ -2155,10 +2315,68 @@ class API:
 			next_offset: Optional[str] = None,
 			switch_pm_text: Optional[str] = None,
 			switch_pm_parameter: Optional[str] = None,
-	):
-		params = _make_optional(locals(), (self, results))
+	) -> bool:
+		params = _make_optional(locals(), self, results)
 		params["results"] = [r.serialize() for r in results]
 		data = self.__make_request("answerInlineQuery", params)
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#sendinvoice
+	def send_invoice(
+			self,
+			chat_id: int,
+			title: str,
+			description: str,
+			payload: str,
+			provider_token: str,
+			start_parameter: str,
+			currency: str,  # Three-letter ISO 4217 currency code, see more on currencies
+			prices: List[LabeledPrice],
+			provider_data: Optional[str] = None,
+			photo_url: Optional[str] = None,
+			photo_size: Optional[int] = None,
+			photo_width: Optional[int] = None,
+			photo_height: Optional[int] = None,
+			need_name: Optional[bool] = None,
+			need_phone_number: Optional[bool] = None,
+			need_email: Optional[bool] = None,
+			need_shipping_address: Optional[bool] = None,
+			send_phone_number_to_provider: Optional[bool] = None,
+			send_email_to_provider: Optional[bool] = None,
+			is_flexible: Optional[bool] = None,
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[InlineKeyboardMarkup] = None,
+	):
+		params = _make_optional(locals(), self)
+		data = self.__make_request("sendInvoice", params)
+		return Message(**data.get("result"))
+
+	# https://core.telegram.org/bots/api#answershippingquery
+	def answer_shipping_query(
+			self,
+			shipping_query_id: str,
+			ok: bool,
+			shipping_options: Optional[List[ShippingOption]] = None,
+			error_message: Optional[str] = None,
+	):
+		assert ok or error_message, "error_message Required if ok is False"
+		params = _make_optional(locals(), self)
+		data = self.__make_request("answerShippingQuery", params)
+		return bool(data.get("result"))
+
+	# https://core.telegram.org/bots/api#answerprecheckoutquery
+	def answer_pre_checkout_query(
+			self,
+			pre_checkout_query_id: str,
+			ok: bool,
+			error_message: Optional[str] = None,
+	):
+		assert ok or error_message, "error_message Required if ok is False"
+		params = _make_optional(locals(), self)
+		data = self.__make_request("answerPreCheckoutQuery", params)
+		return bool(data.get("result"))
 
 	def __get_url(self, api_method) -> str:
 		return f'https://{self.__host}/bot{self.__token}/{api_method}'
@@ -2169,8 +2387,26 @@ class API:
 		return self.__process_response(resp)
 
 	def __make_request(self, api_method: str, params: Optional[dict] = None, method="POST"):
+		def __ser(obj):
+			if type(obj) is str:
+				return obj
+			if type(obj) is list:
+				return [__ser(o) for o in obj]
+			if hasattr(obj, "serialize"):
+				r = obj.serialize()
+				return r
+			return obj
+
+		def __dumps(obj):
+			o = __ser(obj)
+			if type(o) is list:
+				return json.dumps(o)
+			if type(o) is dict:
+				return json.dumps(o)
+			return obj
+
 		url = self.__get_url(api_method)
-		params = {k: json.dumps(v.serialize()) if hasattr(v, "serialize") else v for k, v in params.items()}
+		params = {k: __dumps(v) for k, v in params.items()}
 		params = urlencode(params)
 
 		headers = {
