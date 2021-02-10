@@ -31,6 +31,26 @@ def __ch_obj(target, k, v):
 	return FIELDS.get(k, _DefaultFieldObject)(**v) if type(v) is dict else target.parse_field(k, v)
 
 
+def __ser(obj):
+	if type(obj) is str:
+		return obj
+	if type(obj) is list:
+		return [__ser(o) for o in obj]
+	if hasattr(obj, "serialize"):
+		r = obj.serialize()
+		return r
+	return obj
+
+
+def _dumps(obj):
+	o = __ser(obj)
+	if type(o) is list:
+		return json.dumps(o)
+	if type(o) is dict:
+		return json.dumps(o)
+	return obj
+
+
 # https://core.telegram.org/bots/api#messageentity
 class MessageEntityType(Enum):
 	MENTION = "mention"
@@ -1352,6 +1372,7 @@ class API:
 				self.write_one_param(key, value)
 
 		def write_one_param(self, key, value):
+			value = _dumps(value)
 			self._write_str(f'--{self.boundary}\r\n')
 			self._write_str(f'Content-Disposition: form-data; name="{key}"\r\n')
 			self._write_str('Content-Type: text/plain; charset=utf-8\r\n')
@@ -1385,10 +1406,10 @@ class API:
 				self.buff.write(b'\r\n')
 				self.buff.write(file.read())
 				self.buff.write(b'\r\n')
-				print("[Req]", "\r\n...file data...\r\n", end="")
+				# print("[Req]", "\r\n...file data...\r\n", end="")
 
 		def _write_str(self, value: str):
-			print("[Req]", value, end="")
+			# print("[Req]", value, end="")
 			self.buff.write(value.encode('utf-8'))
 
 		def get_data(self):
@@ -1516,10 +1537,7 @@ class API:
 				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
 			] = None
 	) -> MessageId:
-		params = _make_optional(locals(), self, caption_entities)
-		if caption_entities:
-			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
-
+		params = _make_optional(locals(), self)
 		data = self.__make_request("copyMessage", params=params)
 		return MessageId(**data.get("result"))
 
@@ -1539,10 +1557,7 @@ class API:
 			] = None
 
 	):
-		params = _make_optional(locals(), self, photo, caption_entities)
-		if caption_entities:
-			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
-
+		params = _make_optional(locals(), self, photo)
 		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(photo, "photo")
@@ -1563,10 +1578,7 @@ class API:
 			title: Optional[str] = None,
 			thumb: Optional[Union[InputFile, str]] = None
 	):
-		params = _make_optional(locals(), self, audio, caption_entities, thumb)
-		if caption_entities:
-			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
-
+		params = _make_optional(locals(), self, audio, thumb)
 		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(audio, "audio")
@@ -1594,9 +1606,7 @@ class API:
 				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
 			] = None
 	):
-		params = _make_optional(locals(), self, document, caption_entities, thumb)
-		if caption_entities:
-			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
+		params = _make_optional(locals(), self, document, thumb)
 
 		form = API.MultiPartForm()
 		form.write_params(params)
@@ -1629,10 +1639,7 @@ class API:
 				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
 			] = None
 	):
-		params = _make_optional(locals(), self, video, caption_entities, thumb)
-		if caption_entities:
-			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
-
+		params = _make_optional(locals(), self, video, thumb)
 		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(video, "video")
@@ -1663,10 +1670,7 @@ class API:
 				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
 			] = None
 	):
-		params = _make_optional(locals(), self, animation, caption_entities, thumb)
-		if caption_entities:
-			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
-
+		params = _make_optional(locals(), self, animation, thumb)
 		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(animation, "animation")
@@ -1695,10 +1699,7 @@ class API:
 				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
 			] = None
 	):
-		params = _make_optional(locals(), self, voice, caption_entities)
-		if caption_entities:
-			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
-
+		params = _make_optional(locals(), self, voice)
 		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(voice, "voice")
@@ -1728,10 +1729,7 @@ class API:
 				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
 			] = None
 	):
-		params = _make_optional(locals(), self, video_note, caption_entities, thumb)
-		if caption_entities:
-			params["caption_entities"] = json.dumps([e.serialize() for e in caption_entities])
-
+		params = _make_optional(locals(), self, video_note, thumb)
 		form = API.MultiPartForm()
 		form.write_params(params)
 		form.write_one_input(video_note, "video_note")
@@ -1750,9 +1748,7 @@ class API:
 			reply_to_message_id: int = None,
 			allow_sending_without_reply: bool = None
 	):
-		params = _make_optional(locals(), self, media)
-		params["media"] = json.dumps([m.serialize() for m in media])
-
+		params = _make_optional(locals(), self)
 		form = API.MultiPartForm()
 		for m in media:
 			if type(m.media) is str:
@@ -1895,8 +1891,6 @@ class API:
 	) -> MessageId:
 		params = _make_optional(locals(), self, type_)
 		params["type"] = type_
-		if explanation_entities:
-			params["explanation_entities"] = json.dumps([e.serialize() for e in explanation_entities])
 		data = self.__make_request("sendPoll", params=params)
 		return MessageId(**data.get("result"))
 
@@ -2387,26 +2381,9 @@ class API:
 		return self.__process_response(resp)
 
 	def __make_request(self, api_method: str, params: Optional[dict] = None, method="POST"):
-		def __ser(obj):
-			if type(obj) is str:
-				return obj
-			if type(obj) is list:
-				return [__ser(o) for o in obj]
-			if hasattr(obj, "serialize"):
-				r = obj.serialize()
-				return r
-			return obj
-
-		def __dumps(obj):
-			o = __ser(obj)
-			if type(o) is list:
-				return json.dumps(o)
-			if type(o) is dict:
-				return json.dumps(o)
-			return obj
 
 		url = self.__get_url(api_method)
-		params = {k: __dumps(v) for k, v in params.items()}
+		params = {k: _dumps(v) for k, v in params.items()}
 		params = urlencode(params)
 
 		headers = {
@@ -2423,7 +2400,6 @@ class API:
 	def __process_response(resp):
 		if resp.reason != "OK":
 			data = resp.read()
-			print(resp)
 			raise ValueError("unexpected reason", data)
 
 		if resp.getcode() != 200:
