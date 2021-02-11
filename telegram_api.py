@@ -2477,6 +2477,11 @@ class API:
 		data = self.__make_request("answerPreCheckoutQuery", params)
 		return bool(data.get("result"))
 
+	def set_passport_data_errors(self, user_id: int, errors: List[PassportElementError]):
+		params = _make_optional(locals(), self)
+		data = self.__make_request("setPassportDataErrors", params)
+		return bool(data.get("result"))
+
 	def __get_url(self, api_method) -> str:
 		return f'https://{self.__host}/bot{self.__token}/{api_method}'
 
