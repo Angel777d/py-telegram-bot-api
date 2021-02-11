@@ -1205,6 +1205,7 @@ class Invoice(_DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#shippingaddress
 class ShippingAddress(_DefaultFieldObject):
 	def __init__(
 			self,
@@ -1224,6 +1225,7 @@ class ShippingAddress(_DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#orderinfo
 class OrderInfo(_DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.name: Optional[str] = None
@@ -1234,6 +1236,7 @@ class OrderInfo(_DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#shippingoption
 class ShippingOption(_DefaultFieldObject):
 	def __init__(self, id_: str, title: str, prices: List[LabeledPrice], **kwargs):
 		self.id: str = id_
@@ -1242,8 +1245,8 @@ class ShippingOption(_DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#successfulpayment
 class SuccessfulPayment(_DefaultFieldObject):
-
 	def __init__(
 			self,
 			currency: str,
@@ -1259,10 +1262,10 @@ class SuccessfulPayment(_DefaultFieldObject):
 		self.order_info: Optional[OrderInfo] = None
 		self.telegram_payment_charge_id: str = telegram_payment_charge_id
 		self.provider_payment_charge_id: str = provider_payment_charge_id
-
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#shippingquery
 class ShippingQuery(_DefaultFieldObject):
 	def __init__(self, invoice_payload: str, shipping_address: ShippingAddress, **kwargs):
 		self.id: str = ""
@@ -1272,6 +1275,7 @@ class ShippingQuery(_DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#precheckoutquery
 class PreCheckoutQuery(_DefaultFieldObject):
 	def __init__(self, currency: str, total_amount: int, invoice_payload: str, **kwargs):
 		self.id: str = ""
@@ -1284,6 +1288,8 @@ class PreCheckoutQuery(_DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#telegram-passport
+# https://core.telegram.org/bots/api#encryptedpassportelement
 class EncryptedPassportElement(_DefaultFieldObject):
 	def __init__(self, data: str, **kwargs):
 		self.type: str = ""  # type is reserved word
@@ -1299,6 +1305,7 @@ class EncryptedPassportElement(_DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#encryptedcredentials
 class EncryptedCredentials(_DefaultFieldObject):
 
 	def __init__(self, data: str, secret: str, **kwargs):
@@ -1308,6 +1315,7 @@ class EncryptedCredentials(_DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#passportdata
 class PassportData(_DefaultFieldObject):
 	def __init__(self, data: List[EncryptedPassportElement], credentials: EncryptedCredentials, **kwargs):
 		self.data: List[EncryptedPassportElement] = data
@@ -1315,6 +1323,7 @@ class PassportData(_DefaultFieldObject):
 		super().__init__(**kwargs)
 
 
+# https://core.telegram.org/bots/api#passportfile
 class PassportFile(_DefaultFieldObject):
 	def __init__(self, file_id: str, file_unique_id: str, file_size: int, file_date: int, **kwargs):
 		self.file_id: str = file_id
@@ -1322,6 +1331,106 @@ class PassportFile(_DefaultFieldObject):
 		self.file_size: int = file_size
 		self.file_date: int = file_date
 		super().__init__(**kwargs)
+
+
+# https://core.telegram.org/bots/api#passportelementerror
+class PassportElementError(_Serializable):
+	def __init__(self, source: str, type_: str, message: str, types_check: Optional[Tuple] = None):
+		if types_check:
+			assert type_ in types_check, f'Wrong type "{type_}" not expected.'
+
+		self.source: str = source
+		self.type: str = type_
+		self.message: str = message
+
+	def serialize(self):
+		return _get_public(self)
+
+	def check(self, *types):
+		return self.type in types
+
+
+# https://core.telegram.org/bots/api#passportelementerrordatafield
+class PassportElementErrorDataField(PassportElementError):
+	def __init__(self, type_: str, field_name: str, data_hash: str, message: str):
+		types = ('personal_details', 'passport', 'driver_license', 'identity_card', 'internal_passport', 'address')
+		PassportElementError.__init__(self, "data", type_, message, types)
+		self.field_name: str = field_name
+		self.data_hash: str = data_hash
+
+
+# https://core.telegram.org/bots/api#passportelementerrorfrontside
+class PassportElementErrorFrontSide(PassportElementError):
+	def __init__(self, type_: str, file_hash: str, message: str):
+		types = ('passport', 'driver_license', 'identity_card', 'internal_passport')
+		PassportElementError.__init__(self, "front_side", type_, message, types)
+		self.file_hash: str = file_hash
+
+
+# https://core.telegram.org/bots/api#passportelementerrorreverseside
+class PassportElementErrorReverseSide(PassportElementError):
+	def __init__(self, type_: str, file_hash: str, message: str):
+		types = ('driver_license', 'identity_card')
+		PassportElementError.__init__(self, "reverse_side", type_, message, types)
+		self.file_hash: str = file_hash
+
+
+# https://core.telegram.org/bots/api#passportelementerrorselfie
+class PassportElementErrorSelfie(PassportElementError):
+	def __init__(self, type_: str, file_hash: str, message: str):
+		types = ('passport', 'driver_license', 'identity_card', 'internal_passport')
+		assert type_ in types, f'Wrong type "{type_}" not expected.'
+
+		PassportElementError.__init__(self, "selfie", type_, message)
+		self.file_hash: str = file_hash
+
+
+# https://core.telegram.org/bots/api#passportelementerrorfile
+class PassportElementErrorFile(PassportElementError):
+	def __init__(self, type_: str, file_hash: str, message: str):
+		types = (
+			'utility_bill', 'bank_statement', 'rental_agreement', 'passport_registration', 'temporary_registration')
+		assert type_ in types, f'Wrong type "{type_}" not expected.'
+
+		PassportElementError.__init__(self, "file", type_, message, types)
+		self.file_hash: str = file_hash
+
+
+# https://core.telegram.org/bots/api#passportelementerrorfiles
+class PassportElementErrorFiles(PassportElementError):
+	def __init__(self, type_: str, file_hashes: List[str], message: str):
+		types = (
+			'utility_bill', 'bank_statement', 'rental_agreement', 'passport_registration', 'temporary_registration')
+		PassportElementError.__init__(self, "files", type_, message, types)
+		self.file_hashes: List[str] = file_hashes
+
+
+# https://core.telegram.org/bots/api#passportelementerrortranslationfile
+class PassportElementErrorTranslationFile(PassportElementError):
+	def __init__(self, type_: str, file_hash: str, message: str):
+		types = (
+			'passport', 'driver_license', 'identity_card', 'internal_passport', 'utility_bill', 'bank_statement',
+			'rental_agreement', 'passport_registration', 'temporary_registration')
+		PassportElementError.__init__(self, "translation_file", type_, message, types)
+		self.file_hash: str = file_hash
+
+
+# https://core.telegram.org/bots/api#passportelementerrortranslationfiles
+class PassportElementErrorTranslationFiles(PassportElementError):
+	def __init__(self, type_: str, file_hashes: List[str], message: str):
+		types = (
+			'passport', 'driver_license', 'identity_card', 'internal_passport', 'utility_bill', 'bank_statement',
+			'rental_agreement', 'passport_registration', 'temporary_registration')
+
+		PassportElementError.__init__(self, "translation_files", type_, message, types)
+		self.file_hashes: List[str] = file_hashes
+
+
+# https://core.telegram.org/bots/api#passportelementerrorunspecified
+class PassportElementErrorUnspecified(PassportElementError):
+	def __init__(self, type_: str, element_hash: str, message: str):
+		PassportElementError.__init__(self, "unspecified", type_, message)
+		self.element_hash: str = element_hash
 
 
 FIELDS = {
@@ -1406,7 +1515,8 @@ class API:
 				self.buff.write(b'\r\n')
 				self.buff.write(file.read())
 				self.buff.write(b'\r\n')
-				# print("[Req]", "\r\n...file data...\r\n", end="")
+
+		# print("[Req]", "\r\n...file data...\r\n", end="")
 
 		def _write_str(self, value: str):
 			# print("[Req]", value, end="")
@@ -1466,7 +1576,7 @@ class API:
 
 	# https://core.telegram.org/bots/api#deletewebhook
 	def delete_webhook(self, drop_pending_updates: Optional[bool] = None) -> bool:
-		params = _make_optional({"drop_pending_updates": drop_pending_updates})
+		params = _make_optional(locals(), self)
 		data = self.__make_request("deleteWebhook", params=params)
 		return bool(data.get("result"))
 
@@ -2125,10 +2235,8 @@ class API:
 			disable_web_page_preview: Optional[bool] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
-		params = _make_optional(locals(), self, entities)
+		params = _make_optional(locals(), self)
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
-		if entities:
-			params["entities"] = [e.serialize() for e in entities]
 		data = self.__make_request("editMessageText", params)
 		return Message(**data.get("result"))
 
@@ -2143,10 +2251,8 @@ class API:
 			caption_entities: Optional[List[MessageEntity]] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
-		params = _make_optional(locals(), self, caption_entities)
+		params = _make_optional(locals(), self)
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
-		if caption_entities:
-			params["caption_entities"] = [e.serialize() for e in caption_entities]
 		data = self.__make_request("editMessageCaption", params)
 		return Message(**data.get("result"))
 
@@ -2310,8 +2416,7 @@ class API:
 			switch_pm_text: Optional[str] = None,
 			switch_pm_parameter: Optional[str] = None,
 	) -> bool:
-		params = _make_optional(locals(), self, results)
-		params["results"] = [r.serialize() for r in results]
+		params = _make_optional(locals(), self)
 		data = self.__make_request("answerInlineQuery", params)
 		return bool(data.get("result"))
 
