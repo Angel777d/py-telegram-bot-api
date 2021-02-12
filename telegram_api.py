@@ -160,30 +160,12 @@ class InputMedia(_Serializable, _Caption):
 		self.type: str = type_
 		self.media: Union[InputFile, str] = media
 
-	def serialize(self):
+	def serialize(self) -> dict:
+		result = _make_optional(_get_public(self), self.media)
 		if type(self.media) == str:
-			media = self.media
+			result["media"] = self.media
 		else:
-			media = f'attach://{self.media.file_name}'
-
-		return _make_optional({
-			"type": self.type,
-			"media": media,
-			"caption": self.caption,
-			"parse_mode": self.parse_mode,
-			"caption_entities": [m.serialize() for m in self.caption_entities] if self.caption_entities else None,
-		})
-
-
-# part class
-class _InputThumb(InputMedia):
-	def __init__(self, type_: str, media: str):
-		InputMedia.__init__(self, type_, media)
-		self.thumb: Optional[Union[InputFile, str]] = None
-
-	def serialize(self):
-		result = InputMedia.serialize(self)
-		result["thumb"] = self.thumb
+			result["media"] = f'attach://{self.media.file_name}'
 		return result
 
 
@@ -194,73 +176,42 @@ class InputMediaPhoto(InputMedia):
 
 
 # https://core.telegram.org/bots/api#inputmediavideo
-class InputMediaVideo(_InputThumb):
+class InputMediaVideo(InputMedia):
 	def __init__(self, media: [str, InputFile]):
-		_InputThumb.__init__(self, "video", media)
+		InputMedia.__init__(self, "video", media)
+		self.thumb: Optional[Union[InputFile, str]] = None
 		self.width: Optional[int] = None
 		self.height: Optional[int] = None
 		self.duration: Optional[int] = None
 		self.supports_streaming: Optional[bool] = None
 
-	def serialize(self):
-		result = _InputThumb.serialize(self)
-		result.update(_make_optional({
-			"width": self.width,
-			"height": self.height,
-			"duration": self.duration,
-			"supports_streaming": self.supports_streaming,
-		}))
-		return result
-
 
 # https://core.telegram.org/bots/api#inputmediaanimation
-class InputMediaAnimation(_InputThumb):
+class InputMediaAnimation(InputMedia):
 	def __init__(self, media: [str, InputFile]):
-		_InputThumb.__init__(self, "animation", media)
+		InputMedia.__init__(self, "animation", media)
+		self.thumb: Optional[Union[InputFile, str]] = None
 		self.width: Optional[int] = None
 		self.height: Optional[int] = None
 		self.duration: Optional[int] = None
 
-	def serialize(self):
-		result = _InputThumb.serialize(self)
-		result.update(_make_optional({
-			"width": self.width,
-			"height": self.height,
-			"duration": self.duration,
-		}))
-		return result
-
 
 # https://core.telegram.org/bots/api#inputmediaaudio
-class InputMediaAudio(_InputThumb):
+class InputMediaAudio(InputMedia):
 	def __init__(self, media: [str, InputFile]):
-		_InputThumb.__init__(self, "audio", media)
+		InputMedia.__init__(self, "audio", media)
+		self.thumb: Optional[Union[InputFile, str]] = None
 		self.duration: Optional[int] = None
 		self.performer: Optional[str] = None
 		self.title: Optional[str] = None
 
-	def serialize(self):
-		result = _InputThumb.serialize(self)
-		result.update(_make_optional({
-			"duration": self.duration,
-			"performer": self.performer,
-			"title": self.title,
-		}))
-		return result
-
 
 # https://core.telegram.org/bots/api#inputmediadocument
-class InputMediaDocument(_InputThumb):
+class InputMediaDocument(InputMedia):
 	def __init__(self, media: [str, InputFile]):
-		_InputThumb.__init__(self, "document", media)
+		InputMedia.__init__(self, "document", media)
+		self.thumb: Optional[Union[InputFile, str]] = None
 		self.disable_content_type_detection: Optional[bool] = None
-
-	def serialize(self):
-		result = _InputThumb.serialize(self)
-		result.update(_make_optional({
-			"disable_content_type_detection": self.disable_content_type_detection,
-		}))
-		return result
 
 
 # https://core.telegram.org/bots/api#botcommand
