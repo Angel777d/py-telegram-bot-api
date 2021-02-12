@@ -85,7 +85,7 @@ class ChatType(Enum):
 # service class
 class _Serializable:
 	def serialize(self):
-		raise NotImplementedError("serialize method must be implemented")
+		return _get_public(self)
 
 
 # service class
@@ -141,6 +141,29 @@ class _Contact:
 
 		self.last_name: Optional[str] = None
 		self.vcard: Optional[str] = None
+
+
+# part class
+class _FileBase:
+	def __init__(self):
+		self.file_id: str = ""
+		self.file_unique_id: str = ""
+		self.file_size: int = 0  # Optional. File size
+
+
+# part class
+class _Bounds:
+	def __init__(self):
+		self.width: int = 0  # Photo width
+		self.height: int = 0  # Photo height
+
+
+# part class
+class _FileDescription:
+	def __init__(self):
+		self.file_name: str = ""
+		self.mime_type: str = ""
+		self.thumb: Optional[PhotoSize] = None
 
 
 # https://core.telegram.org/bots/api#inputfile
@@ -220,9 +243,6 @@ class BotCommand(_Serializable):
 		self.command: str = command
 		self.description: str = description
 
-	def serialize(self):
-		return _get_public(self)
-
 
 # https://core.telegram.org/bots/api#messageid
 class MessageId(_DefaultFieldObject):
@@ -265,7 +285,6 @@ class WebhookInfo(_DefaultFieldObject):
 
 # https://core.telegram.org/bots/api#inlinequery
 class InlineQuery(_DefaultFieldObject):
-
 	def __init__(self, **kwargs):
 		self.id: str = ""  # Unique identifier for this query
 		self.from_user: User = User()
@@ -391,9 +410,6 @@ class ChatPermissions(_DefaultFieldObject, _Serializable):
 		self.can_pin_messages: Optional[bool] = None
 		_DefaultFieldObject.__init__(self, **kwargs)
 
-	def serialize(self):
-		return _make_optional(_get_public(self))
-
 
 # https://core.telegram.org/bots/api#chatphotos
 class ChatPhoto(_DefaultFieldObject):
@@ -412,9 +428,6 @@ class LoginUrl(_Serializable):
 		self.forward_text: Optional[str] = None
 		self.bot_username: Optional[str] = None
 		self.request_write_access: Optional[bool] = None
-
-	def serialize(self):
-		return _make_optional(_get_public(self))
 
 
 # https://core.telegram.org/bots/api#callbackgame
@@ -437,9 +450,6 @@ class CallbackGame(_Serializable):
 		self.chat_id: Optional[int] = chat_id
 		self.message_id: Optional[int] = message_id
 		self.inline_message_id: Optional[str] = inline_message_id
-
-	def serialize(self):
-		return _make_optional(_get_public(self))
 
 
 # https://core.telegram.org/bots/api#inlinekeyboardbutton
@@ -478,9 +488,7 @@ class InlineKeyboardMarkup(_Serializable):
 		self.inline_keyboard: List[List[InlineKeyboardButton]] = inline_keyboard
 
 	def serialize(self):
-		return {
-			"inline_keyboard": [[b.serialize() for b in a] for a in self.inline_keyboard]
-		}
+		return {"inline_keyboard": [[b.serialize() for b in a] for a in self.inline_keyboard]}
 
 
 # https://core.telegram.org/bots/api#replykeyboardmarkup
@@ -498,7 +506,7 @@ class ReplyKeyboardMarkup(_Serializable):
 		self.selective: Optional[bool] = selective
 
 	def serialize(self):
-		result = _make_optional(_get_public(self))
+		result = _get_public(self)
 		if self.keyboard:
 			result["keyboard"] = [[b.serialize() for b in a] for a in self.keyboard]
 		return result
@@ -510,9 +518,6 @@ class ReplyKeyboardRemove(_Serializable):
 		self.remove_keyboard: bool = remove_keyboard
 		self.selective: Optional[bool] = selective
 
-	def serialize(self):
-		return _make_optional(_get_public(self))
-
 
 # https://core.telegram.org/bots/api#forcereply
 class ForceReply(_Serializable):
@@ -520,10 +525,8 @@ class ForceReply(_Serializable):
 		self.force_reply: bool = force_reply
 		self.selective: Optional[bool] = selective
 
-	def serialize(self):
-		return _make_optional(_get_public(self))
 
-
+# https://core.telegram.org/bots/api#maskposition
 class MaskPosition(_DefaultFieldObject, _Serializable):
 	def __init__(self, **kwargs):
 		self.point: str = ""
@@ -532,95 +535,78 @@ class MaskPosition(_DefaultFieldObject, _Serializable):
 		self.scale: float = 0
 		_DefaultFieldObject.__init__(self, **kwargs)
 
-	def serialize(self):
-		return _make_optional(_get_public(self))
 
-
-class FileBase:
-	def __init__(self):
-		self.file_id: str = ""  # Identifier for this file, which can be used to download or reuse the file
-		# Unique identifier for this file, which is supposed to be the same over time and for different bots.
-		# Can't be used to download or reuse the file.
-		self.file_unique_id: str = ""
-		self.file_size: int = 0  # Optional. File size
-
-
-class Bounds:
-	def __init__(self):
-		self.width: int = 0  # Photo width
-		self.height: int = 0  # Photo height
-
-
-class PhotoSize(FileBase, Bounds, _DefaultFieldObject):
+# https://core.telegram.org/bots/api#photosize
+class PhotoSize(_FileBase, _Bounds, _DefaultFieldObject):
 	def __init__(self, **kwargs):
-		FileBase.__init__(self)
-		Bounds.__init__(self)
+		_FileBase.__init__(self)
+		_Bounds.__init__(self)
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
-class FileDescription:
-	def __init__(self):
-		self.file_name: str = ""
-		self.mime_type: str = ""
-		self.thumb: Optional[PhotoSize] = None
-
-
-class Animation(FileBase, FileDescription, Bounds, _DefaultFieldObject):
+# https://core.telegram.org/bots/api#animation
+class Animation(_FileBase, _FileDescription, _Bounds, _DefaultFieldObject):
 	def __init__(self, **kwargs):
-		FileBase.__init__(self)
-		FileDescription.__init__(self)
-		Bounds.__init__(self)
+		_FileBase.__init__(self)
+		_FileDescription.__init__(self)
+		_Bounds.__init__(self)
 		self.duration: int = 0
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
-class Audio(FileBase, FileDescription, _DefaultFieldObject):
+# https://core.telegram.org/bots/api#audio
+class Audio(_FileBase, _FileDescription, _DefaultFieldObject):
 	def __init__(self, **kwargs):
-		FileBase.__init__(self)
-		FileDescription.__init__(self)
+		_FileBase.__init__(self)
+		_FileDescription.__init__(self)
 		self.duration: int = 0
 		self.performer: str = ""
 		self.title: str = ""
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
-class Document(FileBase, FileDescription, _DefaultFieldObject):
+# https://core.telegram.org/bots/api#document
+class Document(_FileBase, _FileDescription, _DefaultFieldObject):
 	def __init__(self, **kwargs):
-		FileBase.__init__(self)
-		FileDescription.__init__(self)
+		_FileBase.__init__(self)
+		_FileDescription.__init__(self)
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
-class Video(FileBase, FileDescription, Bounds, _DefaultFieldObject):
+# https://core.telegram.org/bots/api#video
+class Video(_FileBase, _FileDescription, _Bounds, _DefaultFieldObject):
 	def __init__(self, **kwargs):
-		FileBase.__init__(self)
-		FileDescription.__init__(self)
-		Bounds.__init__(self)
+		_FileBase.__init__(self)
+		_FileDescription.__init__(self)
+		_Bounds.__init__(self)
 		self.duration: int = 0
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
-class VideoNote(FileBase, _DefaultFieldObject):
+# https://core.telegram.org/bots/api#videonote
+class VideoNote(_FileBase, _DefaultFieldObject):
 	def __init__(self, **kwargs):
-		FileBase.__init__(self)
+		_FileBase.__init__(self)
 		self.length: int = 0  # Video width and height (diameter of the video message) as defined by sender
 		self.duration: int = 0  # Duration of the video in seconds as defined by sender
 		self.thumb: Optional[PhotoSize] = None
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
-class Voice(FileBase, _DefaultFieldObject):
+# https://core.telegram.org/bots/api#voice
+class Voice(_FileBase, _DefaultFieldObject):
 	def __init__(self, **kwargs):
-		FileBase.__init__(self)
+		_FileBase.__init__(self)
 		self.duration: int = 0  # Duration of the audio in seconds as defined by sender
 		self.mime_type: str = ""
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
-class Sticker(FileBase, Bounds, _DefaultFieldObject):
+# https://core.telegram.org/bots/api#sticker
+class Sticker(_FileBase, _Bounds, _DefaultFieldObject):
 	def __init__(self, **kwargs):
-		FileBase.__init__(self)
-		Bounds.__init__(self)
+		_FileBase.__init__(self)
+		_Bounds.__init__(self)
 		self.is_animated: bool = False  # True,	if the sticker is animated
 		self.thumb: Optional[PhotoSize] = None  # Optional.Sticker thumbnail in the.WEBP or.JPG format
 		self.emoji: str = ""  # Optional.Emoji	associated	with the sticker
@@ -630,6 +616,7 @@ class Sticker(FileBase, Bounds, _DefaultFieldObject):
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
+# https://core.telegram.org/bots/api#stickerset
 class StickerSet(_DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.name: str = ""
@@ -641,6 +628,7 @@ class StickerSet(_DefaultFieldObject):
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
+# https://core.telegram.org/bots/api#user
 class User(_DefaultFieldObject, _Serializable):
 	def __init__(self, **kwargs):
 		self.id: int = 0
@@ -657,20 +645,8 @@ class User(_DefaultFieldObject, _Serializable):
 
 		_DefaultFieldObject.__init__(self, **kwargs)
 
-	def serialize(self):
-		return _make_optional({
-			"id": self.id,
-			"is_bot": self.is_bot,
-			"first_name": self.first_name,
-			"last_name": self.last_name,
-			"username": self.username,
-			"language_code": self.language_code,
-			"can_join_groups": self.can_join_groups,
-			"can_read_all_group_messages": self.can_read_all_group_messages,
-			"supports_inline_queries": self.supports_inline_queries,
-		})
 
-
+# https://core.telegram.org/bots/api#chatmember
 class ChatMember(_DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.user: User = User()
@@ -697,6 +673,7 @@ class ChatMember(_DefaultFieldObject):
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
+# https://core.telegram.org/bots/api#chat
 class Chat(_DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.id: int = 0
@@ -706,6 +683,7 @@ class Chat(_DefaultFieldObject):
 		self.first_name: Optional[str] = None
 		self.last_name: Optional[str] = None
 		self.photo: Optional[ChatPhoto] = None
+		self.bio: Optional[str] = None
 		self.description: Optional[str] = None
 		self.invite_link: Optional[str] = None
 		self.pinned_message: Optional[Message] = None
@@ -713,6 +691,8 @@ class Chat(_DefaultFieldObject):
 		self.slow_mode_delay: Optional[int] = None
 		self.sticker_set_name: Optional[str] = None
 		self.can_set_sticker_set: Optional[bool] = None
+		self.linked_chat_id: Optional[int] = None
+		self.location: Optional[ChatLocation] = None
 
 		_DefaultFieldObject.__init__(self, **kwargs)
 
@@ -721,6 +701,14 @@ class Chat(_DefaultFieldObject):
 		if name == "type":
 			return ChatType(value)
 		return value
+
+
+# https://core.telegram.org/bots/api#chatlocation
+class ChatLocation(_DefaultFieldObject):
+	def __init__(self, **kwargs):
+		self.location: Location = Location()
+		self.address: str = ""
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#messageentity
@@ -746,20 +734,22 @@ class MessageEntity(_DefaultFieldObject, _Serializable):
 		return value
 
 	def serialize(self):
-		return _make_optional({
+		return {
 			"type": self.type.value,
 			"offset": self.offset,
 			"length": self.length,
 			"url": self.url,
 			"user": self.user.serialize() if self.user else None,
 			"language": self.language,
-		})
+		}
 
 
+# https://core.telegram.org/bots/api#message
 class Message(_DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.message_id: int = 0
 		self.date: int = 0
+		self.sender_chat: Chat = Chat()
 		self.chat: Chat = Chat()
 		self.forward_from: Optional[User] = None
 		self.forward_from_chat: Optional[Chat] = None
@@ -805,6 +795,7 @@ class Message(_DefaultFieldObject):
 		self.successful_payment: Optional[SuccessfulPayment] = None
 		self.connected_website: Optional[str] = None
 		self.passport_data: Optional[PassportData] = None
+		self.proximity_alert_triggered: Optional[ProximityAlertTriggered] = None
 		self.reply_markup: Optional[InlineKeyboardMarkup] = None
 
 		_DefaultFieldObject.__init__(self, **kwargs)
@@ -815,6 +806,16 @@ class Message(_DefaultFieldObject):
 		return tuple(e.get_value(self.text) for e in self.entities if e.type == entity_type)
 
 
+# https://core.telegram.org/bots/api#proximityalerttriggered
+class ProximityAlertTriggered(_DefaultFieldObject):
+	def __init__(self, **kwargs):
+		self.traveler: User = User()
+		self.watcher: User = User()
+		self.distance: int = 0
+		_DefaultFieldObject.__init__(self, **kwargs)
+
+
+# https://core.telegram.org/bots/api#update
 class Update(_DefaultFieldObject):
 	def __init__(self, update_id: int, **kwargs):
 		self.update_id: int = update_id
@@ -829,9 +830,6 @@ class Update(_DefaultFieldObject):
 		self.pre_checkout_query: Optional[PreCheckoutQuery] = None
 		self.poll: Optional[Poll] = None
 		self.poll_answer: Optional[PollAnswer] = None
-
-		keys = tuple(k for k in kwargs.keys())
-		self.update_types: Tuple[str] = keys
 
 		_DefaultFieldObject.__init__(self, **kwargs)
 
@@ -851,8 +849,7 @@ class ChosenInlineResult(_DefaultFieldObject):
 
 # https://core.telegram.org/bots/api#inputmessagecontent
 class InputMessageContent(_Serializable):
-	def serialize(self):
-		return _make_optional(_get_public(self))
+	pass
 
 
 # https://core.telegram.org/bots/api#inputtextmessagecontent
@@ -1300,9 +1297,6 @@ class PassportElementError(_Serializable):
 		self.type: str = type_
 		self.message: str = message
 
-	def serialize(self):
-		return _get_public(self)
-
 	def check(self, *types):
 		return self.type in types
 
@@ -1423,6 +1417,7 @@ FIELDS = {
 	"reverse_side": PassportFile,
 	"selfie": PassportFile,
 	"translation": PassportFile,
+	"location": ChatLocation,
 }
 
 
