@@ -88,15 +88,18 @@ class _Serializable:
 		raise NotImplementedError("serialize method must be implemented")
 
 
-# https://core.telegram.org/bots/api#inputfile
-class InputFile(_Serializable):
-	def __init__(self, path: str) -> None:
-		super().__init__()
-		self.value: str = path
-		self.file_name: str = path.split('/')[-1]
+# service class
+class _DefaultFieldObject:
+	def __init__(self, **kwargs):
+		self.__data: dict = kwargs
+		_fill_object(self, kwargs)
 
-	def serialize(self):
-		raise NotImplementedError("serialize method must be implemented")
+	def __repr__(self):
+		return f'[{self.__class__.__name__}] data: {self.__dict__}'
+
+	@staticmethod
+	def parse_field(name, value):
+		return value
 
 
 # part class
@@ -140,12 +143,22 @@ class _Contact:
 		self.vcard: Optional[str] = None
 
 
+# https://core.telegram.org/bots/api#inputfile
+class InputFile:
+	def __init__(self, path: str) -> None:
+		self.value: str = path
+
+	@property
+	def file_name(self) -> str:
+		return self.value.split('/')[-1]
+
+
 # https://core.telegram.org/bots/api#inputmedia
 class InputMedia(_Serializable, _Caption):
-	def __init__(self, type_: str, media: Union[str, InputFile]):
-		super().__init__()
+	def __init__(self, type_: str, media: Union[InputFile, str]):
+		_Caption.__init__(self)
 		self.type: str = type_
-		self.media: Union[str, InputFile] = media
+		self.media: Union[InputFile, str] = media
 
 	def serialize(self):
 		if type(self.media) == str:
@@ -162,37 +175,35 @@ class InputMedia(_Serializable, _Caption):
 		})
 
 
-# service class
+# part class
 class _InputThumb(InputMedia):
 	def __init__(self, type_: str, media: str):
-		super().__init__(type_, media)
-		self.thumb: Optional[InputFile] = None
+		InputMedia.__init__(self, type_, media)
+		self.thumb: Optional[Union[InputFile, str]] = None
 
 	def serialize(self):
-		result = super().serialize()
-		if self.thumb:
-			result["thumb"] = self.thumb.serialize()
+		result = InputMedia.serialize(self)
+		result["thumb"] = self.thumb
 		return result
 
 
 # https://core.telegram.org/bots/api#inputmediaphoto
 class InputMediaPhoto(InputMedia):
-
 	def __init__(self, media: [str, InputFile]):
-		super().__init__("photo", media)
+		InputMedia.__init__(self, "photo", media)
 
 
 # https://core.telegram.org/bots/api#inputmediavideo
 class InputMediaVideo(_InputThumb):
 	def __init__(self, media: [str, InputFile]):
-		super().__init__("video", media)
+		_InputThumb.__init__(self, "video", media)
 		self.width: Optional[int] = None
 		self.height: Optional[int] = None
 		self.duration: Optional[int] = None
 		self.supports_streaming: Optional[bool] = None
 
 	def serialize(self):
-		result = super().serialize()
+		result = _InputThumb.serialize(self)
 		result.update(_make_optional({
 			"width": self.width,
 			"height": self.height,
@@ -205,13 +216,13 @@ class InputMediaVideo(_InputThumb):
 # https://core.telegram.org/bots/api#inputmediaanimation
 class InputMediaAnimation(_InputThumb):
 	def __init__(self, media: [str, InputFile]):
-		super().__init__("animation", media)
+		_InputThumb.__init__(self, "animation", media)
 		self.width: Optional[int] = None
 		self.height: Optional[int] = None
 		self.duration: Optional[int] = None
 
 	def serialize(self):
-		result = super().serialize()
+		result = _InputThumb.serialize(self)
 		result.update(_make_optional({
 			"width": self.width,
 			"height": self.height,
@@ -223,13 +234,13 @@ class InputMediaAnimation(_InputThumb):
 # https://core.telegram.org/bots/api#inputmediaaudio
 class InputMediaAudio(_InputThumb):
 	def __init__(self, media: [str, InputFile]):
-		super().__init__("audio", media)
+		_InputThumb.__init__(self, "audio", media)
 		self.duration: Optional[int] = None
 		self.performer: Optional[str] = None
 		self.title: Optional[str] = None
 
 	def serialize(self):
-		result = super().serialize()
+		result = _InputThumb.serialize(self)
 		result.update(_make_optional({
 			"duration": self.duration,
 			"performer": self.performer,
@@ -241,29 +252,15 @@ class InputMediaAudio(_InputThumb):
 # https://core.telegram.org/bots/api#inputmediadocument
 class InputMediaDocument(_InputThumb):
 	def __init__(self, media: [str, InputFile]):
-		super().__init__("document", media)
+		_InputThumb.__init__(self, "document", media)
 		self.disable_content_type_detection: Optional[bool] = None
 
 	def serialize(self):
-		result = super().serialize()
+		result = _InputThumb.serialize(self)
 		result.update(_make_optional({
 			"disable_content_type_detection": self.disable_content_type_detection,
 		}))
 		return result
-
-
-# service class
-class _DefaultFieldObject:
-	def __init__(self, **kwargs):
-		self.__data: dict = kwargs
-		_fill_object(self, kwargs)
-
-	def __repr__(self):
-		return f'[{self.__class__.__name__}] data: {self.__dict__}'
-
-	@staticmethod
-	def parse_field(name, value):
-		return value
 
 
 # https://core.telegram.org/bots/api#botcommand
@@ -280,7 +277,7 @@ class BotCommand(_Serializable):
 class MessageId(_DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.message_id: int = 0
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#userprofilephotos
@@ -288,7 +285,7 @@ class UserProfilePhotos(_DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.total_count: int = 0
 		self.photos: List[List[PhotoSize]]
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#userprofilephotos
@@ -298,7 +295,7 @@ class File(_DefaultFieldObject):
 		self.file_unique_id: str = ""
 		self.file_size: Optional[int] = None
 		self.file_path: Optional[str] = None
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#webhookinfo
@@ -312,7 +309,7 @@ class WebhookInfo(_DefaultFieldObject):
 		self.last_error_message: Optional[str] = None
 		self.max_connections: Optional[int] = None
 		self.allowed_updates: Optional[List[str]] = None
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#inlinequery
@@ -324,7 +321,7 @@ class InlineQuery(_DefaultFieldObject):
 		self.location: Optional[Location] = None
 		self.query: str = ""  # Text of the query (up to 256 characters)
 		self.offset: str = ""  # Offset of the results to be returned, can be controlled by the bot
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#callbackquery
@@ -337,7 +334,7 @@ class CallbackQuery(_DefaultFieldObject):
 		self.chat_instance: Optional[str] = None
 		self.data: Optional[str] = None
 		self.game_short_name: Optional[str] = None
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#polloption
@@ -345,7 +342,7 @@ class PollOption(_DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.text: str = ""
 		self.voter_count: int = 0
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#poll
@@ -365,7 +362,7 @@ class Poll(_DefaultFieldObject):
 		self.explanation_entities: Optional[List[MessageEntity]] = None
 		self.open_period: Optional[int] = None
 		self.close_date: Optional[int] = None
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#pollanswer
@@ -374,7 +371,7 @@ class PollAnswer(_DefaultFieldObject):
 		self.poll_id: str = ""
 		self.user: User = User()
 		self.option_ids: List[int] = []
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#contact
@@ -385,7 +382,7 @@ class Contact(_DefaultFieldObject):
 		self.last_name: Optional[str] = None
 		self.user_id: Optional[int] = None
 		self.vcard: Optional[str] = None
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#location
@@ -411,7 +408,16 @@ class Game(_DefaultFieldObject):
 		self.text: Optional[str] = None
 		self.text_entities: Optional[List[MessageEntity]] = None
 		self.animation: Optional[Animation] = None
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
+
+
+# https://core.telegram.org/bots/api#gamehighscore
+class GameHighScore(_DefaultFieldObject):
+	def __init__(self, position: int, score: int, **kwargs):
+		self.position: int = position
+		self.user: User = User()
+		self.score: int = score
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#dice
@@ -419,7 +425,7 @@ class Dice(_DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.emoji: str = ""
 		self.value: int = 0
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 class ChatPermissions(_DefaultFieldObject, _Serializable):
@@ -432,7 +438,7 @@ class ChatPermissions(_DefaultFieldObject, _Serializable):
 		self.can_change_info: Optional[bool] = None
 		self.can_invite_users: Optional[bool] = None
 		self.can_pin_messages: Optional[bool] = None
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 	def serialize(self):
 		return _make_optional(_get_public(self))
@@ -445,7 +451,7 @@ class ChatPhoto(_DefaultFieldObject):
 		self.small_file_unique_id: str = ""
 		self.big_file_id: str = ""
 		self.big_file_unique_id: str = ""
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#loginurl
@@ -681,7 +687,7 @@ class StickerSet(_DefaultFieldObject):
 		self.contains_masks: bool = False
 		self.stickers: List[Sticker] = []
 		self.thumb: Optional[PhotoSize] = None
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 class User(_DefaultFieldObject, _Serializable):
@@ -889,7 +895,7 @@ class ChosenInlineResult(_DefaultFieldObject):
 		self.location: Optional[Location] = None
 		self.inline_message_id: Optional[str] = None
 		self.query: str = ""
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#inputmessagecontent
@@ -1202,7 +1208,7 @@ class Invoice(_DefaultFieldObject):
 		self.start_parameter: str = start_parameter
 		self.currency: str = currency
 		self.total_amount: int = total_amount
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#shippingaddress
@@ -1222,7 +1228,7 @@ class ShippingAddress(_DefaultFieldObject):
 		self.street_line1: str = street_line1
 		self.street_line2: str = street_line2
 		self.post_code: str = post_code
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#orderinfo
@@ -1233,7 +1239,7 @@ class OrderInfo(_DefaultFieldObject):
 		self.email: Optional[str] = None
 		self.shipping_address: Optional[ShippingAddress] = None
 
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#shippingoption
@@ -1242,7 +1248,7 @@ class ShippingOption(_DefaultFieldObject):
 		self.id: str = id_
 		self.title: str = title
 		self.prices: List[LabeledPrice] = prices
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#successfulpayment
@@ -1262,7 +1268,7 @@ class SuccessfulPayment(_DefaultFieldObject):
 		self.order_info: Optional[OrderInfo] = None
 		self.telegram_payment_charge_id: str = telegram_payment_charge_id
 		self.provider_payment_charge_id: str = provider_payment_charge_id
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#shippingquery
@@ -1272,7 +1278,7 @@ class ShippingQuery(_DefaultFieldObject):
 		self.from_user: User = User()
 		self.invoice_payload: str = invoice_payload
 		self.shipping_address: ShippingAddress = shipping_address
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#precheckoutquery
@@ -1285,7 +1291,7 @@ class PreCheckoutQuery(_DefaultFieldObject):
 		self.invoice_payload: str = invoice_payload
 		self.shipping_option_id: Optional[str] = None
 		self.order_info: Optional[OrderInfo] = None
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#telegram-passport
@@ -1302,7 +1308,7 @@ class EncryptedPassportElement(_DefaultFieldObject):
 		self.selfie: Optional[PassportFile] = None
 		self.translation: Optional[List[PassportFile]] = None
 		self.hash: str = ""  # hash is reserved word
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#encryptedcredentials
@@ -1312,7 +1318,7 @@ class EncryptedCredentials(_DefaultFieldObject):
 		self.data: str = data
 		self.hash: str = ""  # hash is reserved word
 		self.secret: str = secret
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#passportdata
@@ -1320,7 +1326,7 @@ class PassportData(_DefaultFieldObject):
 	def __init__(self, data: List[EncryptedPassportElement], credentials: EncryptedCredentials, **kwargs):
 		self.data: List[EncryptedPassportElement] = data
 		self.credentials: EncryptedCredentials = credentials
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#passportfile
@@ -1330,7 +1336,7 @@ class PassportFile(_DefaultFieldObject):
 		self.file_unique_id: str = file_unique_id
 		self.file_size: int = file_size
 		self.file_date: int = file_date
-		super().__init__(**kwargs)
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#passportelementerror
@@ -1857,7 +1863,7 @@ class API:
 			disable_notification: bool = None,
 			reply_to_message_id: int = None,
 			allow_sending_without_reply: bool = None
-	):
+	) -> List[Message]:
 		params = _make_optional(locals(), self)
 		form = API.MultiPartForm()
 		for m in media:
@@ -2477,10 +2483,34 @@ class API:
 		data = self.__make_request("answerPreCheckoutQuery", params)
 		return bool(data.get("result"))
 
-	def set_passport_data_errors(self, user_id: int, errors: List[PassportElementError]):
+	def set_passport_data_errors(self, user_id: int, errors: List[PassportElementError]) -> bool:
 		params = _make_optional(locals(), self)
 		data = self.__make_request("setPassportDataErrors", params)
 		return bool(data.get("result"))
+
+	def send_game(
+			self,
+			chat_id: int,
+			game_short_name: str,
+			disable_notification: Optional[bool] = None,
+			reply_to_message_id: Optional[int] = None,
+			allow_sending_without_reply: Optional[bool] = None,
+			reply_markup: Optional[InlineKeyboardMarkup] = None,
+	) -> Message:
+		params = _make_optional(locals(), self)
+		data = self.__make_request("sendGame", params)
+		return Message(**data.get("result"))
+
+	def get_game_high_scores(
+			self,
+			user_id: int,
+			chat_id: Optional[int] = None,
+			message_id: Optional[int] = None,
+			inline_message_id: Optional[str] = None,
+	) -> List[GameHighScore]:
+		params = _make_optional(locals(), self)
+		data = self.__make_request("getGameHighScores", params)
+		return [GameHighScore(**d) for d in data.get("result")]
 
 	def __get_url(self, api_method) -> str:
 		return f'https://{self.__host}/bot{self.__token}/{api_method}'
