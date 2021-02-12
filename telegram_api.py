@@ -168,7 +168,7 @@ class _FileDescription:
 
 # https://core.telegram.org/bots/api#inputfile
 class InputFile:
-	def __init__(self, path: str) -> None:
+	def __init__(self, path: str):
 		self.value: str = path
 
 	@property
@@ -383,10 +383,10 @@ class Game(_DefaultFieldObject):
 
 # https://core.telegram.org/bots/api#gamehighscore
 class GameHighScore(_DefaultFieldObject):
-	def __init__(self, position: int, score: int, **kwargs):
-		self.position: int = position
+	def __init__(self, **kwargs):
+		self.position: int = 0
 		self.user: User = User()
-		self.score: int = score
+		self.score: int = 0
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
@@ -817,8 +817,8 @@ class ProximityAlertTriggered(_DefaultFieldObject):
 
 # https://core.telegram.org/bots/api#update
 class Update(_DefaultFieldObject):
-	def __init__(self, update_id: int, **kwargs):
-		self.update_id: int = update_id
+	def __init__(self, **kwargs):
+		self.update_id: int = 0
 		self.message: Optional[Message] = None
 		self.edited_message: Optional[Message] = None
 		self.channel_post: Optional[Message] = None
@@ -1142,40 +1142,33 @@ class InlineQueryResultCachedAudio(InlineQueryResult, _Caption):
 
 
 # https://core.telegram.org/bots/api#labeledprice
-class LabeledPrice:
-	def __init__(self, label: str, amount: int):
+class LabeledPrice(_DefaultFieldObject, _Serializable):
+	def __init__(self, label: str, amount: int, **kwargs):
 		self.label: str = label
 		self.amount: int = amount
+		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#invoice
 class Invoice(_DefaultFieldObject):
-	def __init__(self, title: str, description: str, start_parameter: str, currency: str, total_amount: int, **kwargs):
-		self.title: str = title
-		self.description: str = description
-		self.start_parameter: str = start_parameter
-		self.currency: str = currency
-		self.total_amount: int = total_amount
+	def __init__(self, **kwargs):
+		self.title: str = ""
+		self.description: str = ""
+		self.start_parameter: str = ""
+		self.currency: str = ""
+		self.total_amount: int = 0
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#shippingaddress
 class ShippingAddress(_DefaultFieldObject):
-	def __init__(
-			self,
-			country_code: str,
-			state: str,
-			city: str,
-			street_line1: str,
-			street_line2: str,
-			post_code: str,
-			**kwargs):
-		self.country_code: str = country_code
-		self.state: str = state
-		self.city: str = city
-		self.street_line1: str = street_line1
-		self.street_line2: str = street_line2
-		self.post_code: str = post_code
+	def __init__(self, **kwargs):
+		self.country_code: str = ""
+		self.state: str = ""
+		self.city: str = ""
+		self.street_line1: str = ""
+		self.street_line2: str = ""
+		self.post_code: str = ""
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
@@ -1191,52 +1184,49 @@ class OrderInfo(_DefaultFieldObject):
 
 
 # https://core.telegram.org/bots/api#shippingoption
-class ShippingOption(_DefaultFieldObject):
-	def __init__(self, id_: str, title: str, prices: List[LabeledPrice], **kwargs):
+class ShippingOption(_Serializable):
+	def __init__(self, id_: str, title: str, prices: List[LabeledPrice]):
 		self.id: str = id_
 		self.title: str = title
 		self.prices: List[LabeledPrice] = prices
-		_DefaultFieldObject.__init__(self, **kwargs)
+
+	def serialize(self):
+		result = _Serializable.serialize(self)
+		result["prices"] = [p.serialize() for p in self.prices]
+		return result
 
 
 # https://core.telegram.org/bots/api#successfulpayment
 class SuccessfulPayment(_DefaultFieldObject):
-	def __init__(
-			self,
-			currency: str,
-			total_amount: int,
-			invoice_payload: str,
-			telegram_payment_charge_id: str,
-			provider_payment_charge_id: str,
-			**kwargs):
-		self.currency: str = currency
-		self.total_amount: int = total_amount
-		self.invoice_payload: str = invoice_payload
+	def __init__(self, **kwargs):
+		self.currency: str = ""
+		self.total_amount: int = 0
+		self.invoice_payload: str = ""
 		self.shipping_option_id: Optional[str] = None
 		self.order_info: Optional[OrderInfo] = None
-		self.telegram_payment_charge_id: str = telegram_payment_charge_id
-		self.provider_payment_charge_id: str = provider_payment_charge_id
+		self.telegram_payment_charge_id: str = ""
+		self.provider_payment_charge_id: str = ""
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#shippingquery
 class ShippingQuery(_DefaultFieldObject):
-	def __init__(self, invoice_payload: str, shipping_address: ShippingAddress, **kwargs):
+	def __init__(self, **kwargs):
 		self.id: str = ""
 		self.from_user: User = User()
-		self.invoice_payload: str = invoice_payload
-		self.shipping_address: ShippingAddress = shipping_address
+		self.invoice_payload: str = ''
+		self.shipping_address: ShippingAddress = ShippingAddress()
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#precheckoutquery
 class PreCheckoutQuery(_DefaultFieldObject):
-	def __init__(self, currency: str, total_amount: int, invoice_payload: str, **kwargs):
+	def __init__(self, **kwargs):
 		self.id: str = ""
 		self.from_user: User = User()
-		self.currency: str = currency
-		self.total_amount: int = total_amount
-		self.invoice_payload: str = invoice_payload
+		self.currency: str = ""
+		self.total_amount: int = 0
+		self.invoice_payload: str = ""
 		self.shipping_option_id: Optional[str] = None
 		self.order_info: Optional[OrderInfo] = None
 		_DefaultFieldObject.__init__(self, **kwargs)
@@ -1245,9 +1235,9 @@ class PreCheckoutQuery(_DefaultFieldObject):
 # https://core.telegram.org/bots/api#telegram-passport
 # https://core.telegram.org/bots/api#encryptedpassportelement
 class EncryptedPassportElement(_DefaultFieldObject):
-	def __init__(self, data: str, **kwargs):
+	def __init__(self, **kwargs):
 		self.type: str = ""  # type is reserved word
-		self.data: str = data
+		self.data: str = ""
 		self.phone_number: Optional[str] = None
 		self.email: Optional[str] = None
 		self.files: Optional[List[PassportFile]] = None
@@ -1261,29 +1251,28 @@ class EncryptedPassportElement(_DefaultFieldObject):
 
 # https://core.telegram.org/bots/api#encryptedcredentials
 class EncryptedCredentials(_DefaultFieldObject):
-
-	def __init__(self, data: str, secret: str, **kwargs):
-		self.data: str = data
-		self.hash: str = ""  # hash is reserved word
-		self.secret: str = secret
+	def __init__(self, **kwargs):
+		self.data: str = ""
+		self.hash: str = ""
+		self.secret: str = ""
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#passportdata
 class PassportData(_DefaultFieldObject):
-	def __init__(self, data: List[EncryptedPassportElement], credentials: EncryptedCredentials, **kwargs):
-		self.data: List[EncryptedPassportElement] = data
-		self.credentials: EncryptedCredentials = credentials
+	def __init__(self, **kwargs):
+		self.data: List[EncryptedPassportElement] = []
+		self.credentials: EncryptedCredentials = EncryptedCredentials()
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
 # https://core.telegram.org/bots/api#passportfile
 class PassportFile(_DefaultFieldObject):
-	def __init__(self, file_id: str, file_unique_id: str, file_size: int, file_date: int, **kwargs):
-		self.file_id: str = file_id
-		self.file_unique_id: str = file_unique_id
-		self.file_size: int = file_size
-		self.file_date: int = file_date
+	def __init__(self, **kwargs):
+		self.file_id: str = ""
+		self.file_unique_id: str = ""
+		self.file_size: int = 0
+		self.file_date: int = 0
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
@@ -1421,7 +1410,7 @@ FIELDS = {
 }
 
 
-# API METHODS
+# https://core.telegram.org/bots/api
 class API:
 	class MultiPartForm:
 		def __init__(self):
@@ -1467,8 +1456,8 @@ class API:
 				self.buff.write(b'\r\n')
 				self.buff.write(file.read())
 				self.buff.write(b'\r\n')
-
-		# print("[Req]", "\r\n...file data...\r\n", end="")
+				# print("[Req]", "\r\n...file data...\r\n", end="")
+				pass
 
 		def _write_str(self, value: str):
 			# print("[Req]", value, end="")
@@ -1497,8 +1486,8 @@ class API:
 			return conn.getresponse()
 
 	def __init__(self, token: str, host: str = "api.telegram.org"):
-		self.__host = host
-		self.__token = token
+		self.__host: str = host
+		self.__token: str = token
 
 	# https://core.telegram.org/bots/api#getupdates
 	def get_updates(self, offset=None, limit=None, timeout=None, allowed_updates=None) -> List[Update]:
@@ -1533,7 +1522,7 @@ class API:
 		return bool(data.get("result"))
 
 	# https://core.telegram.org/bots/api#getwebhookinfo
-	def get_webhook_info(self):
+	def get_webhook_info(self) -> WebhookInfo:
 		data = self.__make_request("getWebhookInfo", params={})
 		return WebhookInfo(**data.get("result"))
 
