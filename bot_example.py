@@ -1,5 +1,4 @@
-from telegram_api import API, Update, MessageEntityType
-from pooling import Pooling
+from telegram_bot_api import Pooling, API, Update, MessageEntityType
 
 BOT_NAME = "Test Bot"
 api = API(token="Your bot API key here")
