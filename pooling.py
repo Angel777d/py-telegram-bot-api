@@ -33,12 +33,11 @@ class Pooling:
 	def __request_update(self):
 		print("[Pooling] started")
 		while self.__isRunning:
-			self.__do_request()
-
-			# try:
-			# 	self.__do_request()
-			# except Exception as ex:
-			# 	print("[Pooling] got exception", ex)
+			# self.__do_request()
+			try:
+				self.__do_request()
+			except Exception as ex:
+				print("[Pooling] got exception", ex)
 			sleep(self.__update_time)
 		self.__pooling = None
 		print("[Pooling] stopped")
