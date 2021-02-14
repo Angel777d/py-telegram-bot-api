@@ -2,7 +2,7 @@ from threading import Thread
 from time import sleep
 from typing import Callable
 
-from api import Update, API
+from telegram_bot_api import API, Update
 
 
 class Pooling:
