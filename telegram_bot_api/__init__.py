@@ -1,3 +1,3 @@
-from api import *
-from pooling import *
+from .api import *
+from .pooling import *
 
