@@ -1,4 +1,4 @@
-from telegram_bot_api import Pooling, API, Update, MessageEntityType
+from telegram_bot_api import Pooling, API, Update, MessageEntityType, get_entities_by_type
 
 BOT_NAME = "Test Bot"
 api = API(token="Your bot API key here")
@@ -11,7 +11,7 @@ def handler(update: Update):
 	msg = update.message
 
 	# this bot support only messages, contains "/". /help for example
-	commands = msg.get_entities_by_type(MessageEntityType.BOT_COMMAND)
+	commands = get_entities_by_type(msg, MessageEntityType.BOT_COMMAND)
 	for command in commands:
 
 		if command == "/help":

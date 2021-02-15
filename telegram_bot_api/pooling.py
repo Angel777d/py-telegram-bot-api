@@ -16,7 +16,7 @@ class Pooling:
 
 	def start(self):
 		if self.__pooling:
-			raise RuntimeError("[Pooling] already running")
+			raise RuntimeError("Pooling already running")
 
 		self.__isRunning = True
 		self.__pooling = Thread(target=self.__request_update)
@@ -26,12 +26,12 @@ class Pooling:
 
 	def stop(self):
 		if not self.__pooling:
-			raise RuntimeError("[Pooling] not running")
+			raise RuntimeError("Pooling not running")
 
 		self.__isRunning = False
 
 	def __request_update(self):
-		print("[Pooling] started")
+		# print("[Pooling] started")
 		while self.__isRunning:
 			# self.__do_request()
 			try:
@@ -40,7 +40,7 @@ class Pooling:
 				print("[Pooling] got exception", ex)
 			sleep(self.__update_time)
 		self.__pooling = None
-		print("[Pooling] stopped")
+		# print("[Pooling] stopped")
 
 	def __do_request(self):
 		updates = self.__api.get_updates(offset=self.__lastUpdate)

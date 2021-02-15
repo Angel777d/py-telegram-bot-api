@@ -10,12 +10,12 @@ from typing import List, Optional, Tuple, Any, Union
 from urllib.parse import urlencode
 
 
-def _get_public(obj: Any):
-	return {name: getattr(obj, name) for name in vars(obj) if not name.startswith('_')}
-
-
 def _make_optional(params: dict, *exclude):
 	return {k: v for k, v in params.items() if v is not None and v not in exclude}
+
+
+def _get_public(obj: Any):
+	return _make_optional({name: getattr(obj, name) for name in vars(obj) if not name.startswith('_')})
 
 
 def _fill_object(target, data):
@@ -95,7 +95,7 @@ class _DefaultFieldObject:
 		_fill_object(self, kwargs)
 
 	def __repr__(self):
-		return f'[{self.__class__.__name__}] data: {self.__dict__}'
+		return f'[{self.__class__.__name__}] data: {_get_public(self)}'
 
 	@staticmethod
 	def parse_field(name, value):
@@ -724,9 +724,6 @@ class MessageEntity(_DefaultFieldObject, _Serializable):
 
 		_DefaultFieldObject.__init__(self, **kwargs)
 
-	def get_value(self, text: str) -> str:
-		return text[self.offset:self.offset + self.length]
-
 	@staticmethod
 	def parse_field(name, value):
 		if name == "type":
@@ -749,8 +746,8 @@ class Message(_DefaultFieldObject):
 	def __init__(self, **kwargs):
 		self.message_id: int = 0
 		self.date: int = 0
-		self.sender_chat: Chat = Chat()
 		self.chat: Chat = Chat()
+		self.sender_chat: Optional[Chat] = None
 		self.forward_from: Optional[User] = None
 		self.forward_from_chat: Optional[Chat] = None
 		self.forward_from_message_id: Optional[int] = None
@@ -800,10 +797,7 @@ class Message(_DefaultFieldObject):
 
 		_DefaultFieldObject.__init__(self, **kwargs)
 		# we can't use "from" word in code
-		self.from_user: Optional[User] = getattr(self, "from")
-
-	def get_entities_by_type(self, entity_type: MessageEntityType) -> Tuple[str]:
-		return tuple(e.get_value(self.text) for e in self.entities if e.type == entity_type)
+		self.from_user: Optional[User] = getattr(self, "from", None)
 
 
 # https://core.telegram.org/bots/api#proximityalerttriggered
@@ -1556,6 +1550,7 @@ class API:
 				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
 			] = None
 	) -> Message:
+		# assert not (parse_mode and entities)
 		params = _make_optional(locals(), self)
 		data = self.__make_request("sendMessage", params=params)
 		return Message(**data.get("result"))
