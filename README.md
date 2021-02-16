@@ -17,20 +17,20 @@ Status:
 - [x] delete_webhook
 - [x] get_webhook_info
 - [x] get_me
-- [ ] log_out
-- [ ] close
+- [x] log_out
+- [x] close
 - [x] send_message
-- [ ] forward_message
-- [ ] copy_message
+- [x] forward_message
+- [x] copy_message
 - [x] send_photo
-- [ ] send_audio
-- [ ] send_document
-- [ ] send_video
-- [ ] send_animation
-- [ ] send_voice
-- [ ] send_video_note
+- [x] send_audio
+- [X] send_document
+- [X] send_video
+- [X] send_animation
+- [X] send_voice
+- [X] send_video_note
 - [x] send_media_group
-- [ ] send_location
+- [X] send_location
 - [ ] edit_message_live_location
 - [ ] stop_message_live_location
 - [ ] send_venue
