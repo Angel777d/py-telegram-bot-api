@@ -2,6 +2,7 @@
 
 ## Designed to be simple, zero dependency, one file python telegram bot api wrapper
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/6d8bcaad92474d448d74fd8c7a8a39a4)](https://app.codacy.com/gh/Angel777d/py-telegram-bot-api?utm_source=github.com&utm_medium=referral&utm_content=Angel777d/py-telegram-bot-api&utm_campaign=Badge_Grade)
 [![license](https://img.shields.io/github/license/angel777d/py-telegram-bot-api?style=flat-square)](https://github.com/Angel777d/py-telegram-bot-api/blob/main/LICENSE)
 [![pip version](https://img.shields.io/pypi/v/py-telegram-bot-api.svg?style=flat-square)](https://pypi.org/project/py-telegram-bot-api/)
 [![python version](https://img.shields.io/badge/python-3.6+-blue.svg?style=flat-square)](https://pypi.org/project/py-telegram-bot-api/)
