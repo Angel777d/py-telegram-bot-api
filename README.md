@@ -42,6 +42,7 @@ All documentation you need can be found [here](https://core.telegram.org/bots/ap
 Differences:
 
 *   API's methods use snake_case_style instead of "camelCaseStyle" in telegram docs.
+
 *   Message structure use `from_user` instead of `from`
   (from is a reserved word in Python)
 
@@ -91,7 +92,7 @@ Development done. Tests in progress.
 *   send_media_group
 *   send_location
 
-#### Not tested methods:
+#### Not tested methods
 
 *   edit_message_live_location
 *   stop_message_live_location
