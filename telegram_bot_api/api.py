@@ -1505,7 +1505,7 @@ _FIELDS = {
 	"location": ChatLocation,
 }
 
-Keyboards: Union[InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+Keyboards = Union[InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
 
 
 # https://core.telegram.org/bots/api
