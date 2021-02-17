@@ -894,10 +894,9 @@ class ChosenInlineResult(_DefaultFieldObject):
 		_DefaultFieldObject.__init__(self, **kwargs)
 
 
-"""https://core.telegram.org/bots/api#inputmessagecontent"""
-
-
 class InputMessageContent(_Serializable):
+	"""https://core.telegram.org/bots/api#inputmessagecontent"""
+
 	pass
 
 
@@ -1374,7 +1373,7 @@ class PassportElementError(_Serializable):
 		self.type: str = type_
 		self.message: str = message
 
-	def check(self, *types):
+	def _check(self, *types):
 		return self.type in types
 
 
@@ -1582,9 +1581,9 @@ class API:
 
 			return conn.getresponse()
 
-	"""https://core.telegram.org/bots/api"""
-
 	def __init__(self, token: str, host: str = "api.telegram.org"):
+		"""https://core.telegram.org/bots/api"""
+
 		self.__host: str = host
 		self.__token: str = token
 
