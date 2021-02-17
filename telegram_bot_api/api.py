@@ -24,17 +24,17 @@ def _fill_object(target, data):
 
 
 def __ch_list(target, k, v):
-	return [__ch_list(target, k, a) for a in v] if type(v) is list else __ch_obj(target, k, v)
+	return [__ch_list(target, k, a) for a in v] if isinstance(v, list) else __ch_obj(target, k, v)
 
 
 def __ch_obj(target, k, v):
-	return FIELDS.get(k, _DefaultFieldObject)(**v) if type(v) is dict else target.parse_field(k, v)
+	return FIELDS.get(k, _DefaultFieldObject)(**v) if isinstance(v, dict) else target.parse_field(k, v)
 
 
 def __ser(obj):
-	if type(obj) is str:
+	if isinstance(obj, str):
 		return obj
-	if type(obj) is list:
+	if isinstance(obj, list):
 		return [__ser(o) for o in obj]
 	if hasattr(obj, "serialize"):
 		r = obj.serialize()
@@ -44,9 +44,9 @@ def __ser(obj):
 
 def _dumps(obj):
 	o = __ser(obj)
-	if type(o) is list:
+	if isinstance(o, list):
 		return json.dumps(o)
-	if type(o) is dict:
+	if isinstance(o, dict):
 		return json.dumps(o)
 	return obj
 
@@ -185,7 +185,7 @@ class InputMedia(_Serializable, _Caption):
 
 	def serialize(self) -> dict:
 		result = _make_optional(_get_public(self), self.media)
-		if type(self.media) == str:
+		if isinstance(self.media, str):
 			result["media"] = self.media
 		else:
 			result["media"] = f'attach://{self.media.file_name}'
@@ -1426,7 +1426,7 @@ class API:
 			self._write_str(f'{value}\r\n')
 
 		def write_one_input(self, input_file: Union[InputFile, str], field: str):
-			if type(input_file) is str:
+			if isinstance(input_file, str):
 				self.write_params({field: input_file})
 			else:
 				self.write_file(input_file, field)
@@ -1797,7 +1797,7 @@ class API:
 		params = _make_optional(locals(), self)
 		form = API.MultiPartForm()
 		for m in media:
-			if type(m.media) is str:
+			if isinstance(m.media, str):
 				continue
 			form.write_file(m.media)
 		form.write_params(params)
@@ -2202,7 +2202,7 @@ class API:
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
 		params = _make_optional(locals(), self)
-		assert type(media.media) == str, "can't upload file while edit message"
+		assert isinstance(media.media, str), "can't upload file while edit message"
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
 		data = self.__make_request("editMessageMedia", params)
 		return Message(**data.get("result"))
