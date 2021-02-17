@@ -1,5 +1,7 @@
 # Simple Telegram Bot API
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/6d8bcaad92474d448d74fd8c7a8a39a4)](https://app.codacy.com/gh/Angel777d/py-telegram-bot-api?utm_source=github.com&utm_medium=referral&utm_content=Angel777d/py-telegram-bot-api&utm_campaign=Badge_Grade)
+
 ## Designed to be:
 ### Simple
 ### Zero dependency
