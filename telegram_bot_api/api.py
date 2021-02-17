@@ -1505,6 +1505,8 @@ _FIELDS = {
 	"location": ChatLocation,
 }
 
+Keyboards: Union[InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
+
 
 # https://core.telegram.org/bots/api
 class API:
@@ -1552,7 +1554,8 @@ class API:
 				self.buff.write(b'\r\n')
 				self.buff.write(file.read())
 				self.buff.write(b'\r\n')
-				# print("[Req]", "\r\n...file data...\r\n", end="")
+
+		# print("[Req]", "\r\n...file data...\r\n", end="")
 
 		def _write_str(self, value: str):
 			# print("[Req]", value, end="")
@@ -1649,9 +1652,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 	) -> Message:
 		# assert not (parse_mode and entities)
 		params = _make_optional(locals(), self)
@@ -1682,9 +1683,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 	) -> MessageId:
 		params = _make_optional(locals(), self)
 		data = self.__make_request("copyMessage", params=params)
@@ -1701,9 +1700,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 
 	):
 		params = _make_optional(locals(), self, photo)
@@ -1751,9 +1748,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 	):
 		params = _make_optional(locals(), self, document, thumb)
 
@@ -1784,9 +1779,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 	):
 		params = _make_optional(locals(), self, video, thumb)
 		form = self._MultiPartForm()
@@ -1815,9 +1808,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 	):
 		params = _make_optional(locals(), self, animation, thumb)
 		form = self._MultiPartForm()
@@ -1844,9 +1835,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 	):
 		params = _make_optional(locals(), self, voice)
 		form = self._MultiPartForm()
@@ -1874,9 +1863,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 	):
 		params = _make_optional(locals(), self, video_note, thumb)
 		form = self._MultiPartForm()
@@ -1921,9 +1908,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 
 	) -> MessageId:
 		params = _make_optional(locals(), self)
@@ -1941,9 +1926,7 @@ class API:
 			horizontal_accuracy: Optional[float] = None,
 			heading: Optional[int] = None,
 			proximity_alert_radius: Optional[int] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 
 	) -> Union[MessageId, bool]:
 		params = _make_optional(locals(), self)
@@ -1958,9 +1941,7 @@ class API:
 			chat_id: Optional[Union[int, str]] = None,
 			message_id: Optional[int] = None,
 			inline_message_id: Optional[str] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 
 	) -> Union[MessageId, bool]:
 		params = _make_optional(locals(), self)
@@ -1984,9 +1965,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 
 	) -> MessageId:
 		params = _make_optional(locals(), self)
@@ -2004,9 +1983,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 
 	) -> MessageId:
 		params = _make_optional(locals(), self)
@@ -2033,9 +2010,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 
 	) -> MessageId:
 		params = _make_optional(locals(), self, type_)
@@ -2051,9 +2026,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 
 	) -> MessageId:
 		params = _make_optional(locals(), self)
@@ -2348,9 +2321,7 @@ class API:
 			disable_notification: Optional[bool] = None,
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
-			reply_markup: Optional[Union[
-				InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
-			] = None
+			reply_markup: Optional[Keyboards] = None
 
 	) -> Message:
 		params = _make_optional(locals(), self, sticker)
