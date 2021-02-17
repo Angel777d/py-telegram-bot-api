@@ -202,7 +202,7 @@ class InputMediaPhoto(InputMedia):
 
 
 class InputMediaVideo(InputMedia):
-	"""# https://core.telegram.org/bots/api#inputmediavideo"""
+	"""https://core.telegram.org/bots/api#inputmediavideo"""
 
 	def __init__(self, media: [str, InputFile]):
 		InputMedia.__init__(self, "video", media)
@@ -236,7 +236,7 @@ class InputMediaAudio(InputMedia):
 
 
 class InputMediaDocument(InputMedia):
-	"""# https://core.telegram.org/bots/api#inputmediadocument"""
+	"""https://core.telegram.org/bots/api#inputmediadocument"""
 
 	def __init__(self, media: [str, InputFile]):
 		InputMedia.__init__(self, "document", media)
@@ -245,7 +245,7 @@ class InputMediaDocument(InputMedia):
 
 
 class BotCommand(_Serializable):
-	"""# https://core.telegram.org/bots/api#botcommand"""
+	"""https://core.telegram.org/bots/api#botcommand"""
 
 	def __init__(self, command: str, description: str):
 		self.command: str = command
@@ -253,7 +253,7 @@ class BotCommand(_Serializable):
 
 
 class MessageId(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#messageid"""
+	"""https://core.telegram.org/bots/api#messageid"""
 
 	def __init__(self, **kwargs):
 		self.message_id: int = 0
@@ -261,7 +261,7 @@ class MessageId(_DefaultFieldObject):
 
 
 class UserProfilePhotos(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#userprofilephotos"""
+	"""https://core.telegram.org/bots/api#userprofilephotos"""
 
 	def __init__(self, **kwargs):
 		self.total_count: int = 0
@@ -270,7 +270,7 @@ class UserProfilePhotos(_DefaultFieldObject):
 
 
 class File(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#userprofilephotos"""
+	"""https://core.telegram.org/bots/api#userprofilephotos"""
 
 	def __init__(self, **kwargs):
 		self.file_id: str = ""
@@ -281,7 +281,7 @@ class File(_DefaultFieldObject):
 
 
 class WebhookInfo(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#webhookinfo"""
+	"""https://core.telegram.org/bots/api#webhookinfo"""
 
 	def __init__(self, **kwargs):
 		self.url: str = ""
@@ -296,7 +296,7 @@ class WebhookInfo(_DefaultFieldObject):
 
 
 class InlineQuery(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#inlinequery"""
+	"""https://core.telegram.org/bots/api#inlinequery"""
 
 	def __init__(self, **kwargs):
 		self.id: str = ""  # Unique identifier for this query
@@ -308,7 +308,7 @@ class InlineQuery(_DefaultFieldObject):
 
 
 class CallbackQuery(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#callbackquery"""
+	"""https://core.telegram.org/bots/api#callbackquery"""
 
 	def __init__(self, **kwargs):
 		self.id: str = ""
@@ -322,7 +322,7 @@ class CallbackQuery(_DefaultFieldObject):
 
 
 class PollOption(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#polloption"""
+	"""https://core.telegram.org/bots/api#polloption"""
 
 	def __init__(self, **kwargs):
 		self.text: str = ""
@@ -331,7 +331,7 @@ class PollOption(_DefaultFieldObject):
 
 
 class Poll(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#poll"""
+	"""https://core.telegram.org/bots/api#poll"""
 
 	def __init__(self, **kwargs):
 		self.id: str = ""
@@ -352,7 +352,7 @@ class Poll(_DefaultFieldObject):
 
 
 class PollAnswer(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#pollanswer"""
+	"""https://core.telegram.org/bots/api#pollanswer"""
 
 	def __init__(self, **kwargs):
 		self.poll_id: str = ""
@@ -362,7 +362,7 @@ class PollAnswer(_DefaultFieldObject):
 
 
 class Contact(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#contact"""
+	"""https://core.telegram.org/bots/api#contact"""
 
 	def __init__(self, **kwargs):
 		self.phone_number: str = ""
@@ -374,7 +374,7 @@ class Contact(_DefaultFieldObject):
 
 
 class Location(_Location, _DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#location"""
+	"""https://core.telegram.org/bots/api#location"""
 
 	def __init__(self, **kwargs):
 		_Location.__init__(self, 0, 0)
@@ -391,7 +391,7 @@ class Venue(_Venue, _DefaultFieldObject):
 
 
 class Game(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#game"""
+	"""https://core.telegram.org/bots/api#game"""
 
 	def __init__(self, **kwargs):
 		self.title: str = ""
@@ -404,7 +404,7 @@ class Game(_DefaultFieldObject):
 
 
 class GameHighScore(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#gamehighscore"""
+	"""https://core.telegram.org/bots/api#gamehighscore"""
 
 	def __init__(self, **kwargs):
 		self.position: int = 0
@@ -414,7 +414,7 @@ class GameHighScore(_DefaultFieldObject):
 
 
 class Dice(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#dice"""
+	"""https://core.telegram.org/bots/api#dice"""
 
 	def __init__(self, **kwargs):
 		self.emoji: str = ""
@@ -438,7 +438,7 @@ class ChatPermissions(_DefaultFieldObject, _Serializable):
 
 
 class ChatPhoto(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#chatphotos"""
+	"""https://core.telegram.org/bots/api#chatphotos"""
 
 	def __init__(self, **kwargs):
 		self.small_file_id: str = ""
@@ -449,7 +449,7 @@ class ChatPhoto(_DefaultFieldObject):
 
 
 class LoginUrl(_Serializable):
-	"""# https://core.telegram.org/bots/api#loginurl"""
+	"""https://core.telegram.org/bots/api#loginurl"""
 
 	def __init__(self, url: str):
 		self.url: str = url
@@ -459,7 +459,7 @@ class LoginUrl(_Serializable):
 
 
 class CallbackGame(_Serializable):
-	"""# https://core.telegram.org/bots/api#callbackgame"""
+	"""https://core.telegram.org/bots/api#callbackgame"""
 
 	def __init__(
 			self,
@@ -482,7 +482,7 @@ class CallbackGame(_Serializable):
 
 
 class InlineKeyboardButton(_Serializable):
-	"""# https://core.telegram.org/bots/api#inlinekeyboardbutton"""
+	"""https://core.telegram.org/bots/api#inlinekeyboardbutton"""
 
 	def __init__(
 			self,
@@ -513,7 +513,7 @@ class InlineKeyboardButton(_Serializable):
 
 
 class InlineKeyboardMarkup(_Serializable):
-	"""# https://core.telegram.org/bots/api#inlinekeyboardmarkup"""
+	"""https://core.telegram.org/bots/api#inlinekeyboardmarkup"""
 
 	def __init__(self, inline_keyboard: List[List[InlineKeyboardButton]]):
 		self.inline_keyboard: List[List[InlineKeyboardButton]] = inline_keyboard
@@ -523,7 +523,7 @@ class InlineKeyboardMarkup(_Serializable):
 
 
 class ReplyKeyboardMarkup(_Serializable):
-	"""# https://core.telegram.org/bots/api#replykeyboardmarkup"""
+	"""https://core.telegram.org/bots/api#replykeyboardmarkup"""
 
 	def __init__(
 			self,
@@ -545,7 +545,7 @@ class ReplyKeyboardMarkup(_Serializable):
 
 
 class ReplyKeyboardRemove(_Serializable):
-	"""# https://core.telegram.org/bots/api#replykeyboardmarkup"""
+	"""https://core.telegram.org/bots/api#replykeyboardmarkup"""
 
 	def __init__(self, remove_keyboard: bool = True, selective: Optional[bool] = None):
 		self.remove_keyboard: bool = remove_keyboard
@@ -553,7 +553,7 @@ class ReplyKeyboardRemove(_Serializable):
 
 
 class ForceReply(_Serializable):
-	"""# https://core.telegram.org/bots/api#forcereply"""
+	"""https://core.telegram.org/bots/api#forcereply"""
 
 	def __init__(self, force_reply: bool = True, selective: Optional[bool] = None):
 		self.force_reply: bool = force_reply
@@ -561,7 +561,7 @@ class ForceReply(_Serializable):
 
 
 class MaskPosition(_DefaultFieldObject, _Serializable):
-	"""# https://core.telegram.org/bots/api#maskposition"""
+	"""https://core.telegram.org/bots/api#maskposition"""
 
 	def __init__(self, **kwargs):
 		self.point: str = ""
@@ -572,7 +572,7 @@ class MaskPosition(_DefaultFieldObject, _Serializable):
 
 
 class PhotoSize(_FileBase, _Bounds, _DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#photosize"""
+	"""https://core.telegram.org/bots/api#photosize"""
 
 	def __init__(self, **kwargs):
 		_FileBase.__init__(self)
@@ -581,7 +581,7 @@ class PhotoSize(_FileBase, _Bounds, _DefaultFieldObject):
 
 
 class Animation(_FileBase, _FileDescription, _Bounds, _DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#animation"""
+	"""https://core.telegram.org/bots/api#animation"""
 
 	def __init__(self, **kwargs):
 		_FileBase.__init__(self)
@@ -592,7 +592,7 @@ class Animation(_FileBase, _FileDescription, _Bounds, _DefaultFieldObject):
 
 
 class Audio(_FileBase, _FileDescription, _DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#audio"""
+	"""https://core.telegram.org/bots/api#audio"""
 
 	def __init__(self, **kwargs):
 		_FileBase.__init__(self)
@@ -604,7 +604,7 @@ class Audio(_FileBase, _FileDescription, _DefaultFieldObject):
 
 
 class Document(_FileBase, _FileDescription, _DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#document"""
+	"""https://core.telegram.org/bots/api#document"""
 
 	def __init__(self, **kwargs):
 		_FileBase.__init__(self)
@@ -613,7 +613,7 @@ class Document(_FileBase, _FileDescription, _DefaultFieldObject):
 
 
 class Video(_FileBase, _FileDescription, _Bounds, _DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#video"""
+	"""https://core.telegram.org/bots/api#video"""
 
 	def __init__(self, **kwargs):
 		_FileBase.__init__(self)
@@ -624,7 +624,7 @@ class Video(_FileBase, _FileDescription, _Bounds, _DefaultFieldObject):
 
 
 class VideoNote(_FileBase, _DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#videonote"""
+	"""https://core.telegram.org/bots/api#videonote"""
 
 	def __init__(self, **kwargs):
 		_FileBase.__init__(self)
@@ -635,7 +635,7 @@ class VideoNote(_FileBase, _DefaultFieldObject):
 
 
 class Voice(_FileBase, _DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#voice"""
+	"""https://core.telegram.org/bots/api#voice"""
 
 	def __init__(self, **kwargs):
 		_FileBase.__init__(self)
@@ -645,7 +645,7 @@ class Voice(_FileBase, _DefaultFieldObject):
 
 
 class Sticker(_FileBase, _Bounds, _DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#sticker"""
+	"""https://core.telegram.org/bots/api#sticker"""
 
 	def __init__(self, **kwargs):
 		_FileBase.__init__(self)
@@ -660,7 +660,7 @@ class Sticker(_FileBase, _Bounds, _DefaultFieldObject):
 
 
 class StickerSet(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#stickerset"""
+	"""https://core.telegram.org/bots/api#stickerset"""
 
 	def __init__(self, **kwargs):
 		self.name: str = ""
@@ -673,7 +673,7 @@ class StickerSet(_DefaultFieldObject):
 
 
 class User(_DefaultFieldObject, _Serializable):
-	"""# https://core.telegram.org/bots/api#user"""
+	"""https://core.telegram.org/bots/api#user"""
 
 	def __init__(self, **kwargs):
 		self.id: int = 0
@@ -692,7 +692,7 @@ class User(_DefaultFieldObject, _Serializable):
 
 
 class ChatMember(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#chatmember"""
+	"""https://core.telegram.org/bots/api#chatmember"""
 
 	def __init__(self, **kwargs):
 		self.user: User = User()
@@ -720,7 +720,7 @@ class ChatMember(_DefaultFieldObject):
 
 
 class Chat(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#chat"""
+	"""https://core.telegram.org/bots/api#chat"""
 
 	def __init__(self, **kwargs):
 		self.id: int = 0
@@ -751,7 +751,7 @@ class Chat(_DefaultFieldObject):
 
 
 class ChatLocation(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#chatlocation"""
+	"""https://core.telegram.org/bots/api#chatlocation"""
 
 	def __init__(self, **kwargs):
 		self.location: Location = Location()
@@ -760,7 +760,7 @@ class ChatLocation(_DefaultFieldObject):
 
 
 class MessageEntity(_DefaultFieldObject, _Serializable):
-	"""# https://core.telegram.org/bots/api#messageentity"""
+	"""https://core.telegram.org/bots/api#messageentity"""
 
 	def __init__(self, **kwargs):
 		self.type: MessageEntityType = MessageEntityType.WRONG
@@ -791,7 +791,7 @@ class MessageEntity(_DefaultFieldObject, _Serializable):
 
 
 class Message(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#message"""
+	"""https://core.telegram.org/bots/api#message"""
 
 	def __init__(self, **kwargs):
 		self.message_id: int = 0
@@ -851,7 +851,7 @@ class Message(_DefaultFieldObject):
 
 
 class ProximityAlertTriggered(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#proximityalerttriggered"""
+	"""https://core.telegram.org/bots/api#proximityalerttriggered"""
 
 	def __init__(self, **kwargs):
 		self.traveler: User = User()
@@ -861,7 +861,7 @@ class ProximityAlertTriggered(_DefaultFieldObject):
 
 
 class Update(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#update"""
+	"""https://core.telegram.org/bots/api#update"""
 
 	def __init__(self, **kwargs):
 		self.update_id: int = 0
@@ -883,7 +883,7 @@ class Update(_DefaultFieldObject):
 # Inline classes
 
 class ChosenInlineResult(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#choseninlineresult"""
+	"""https://core.telegram.org/bots/api#choseninlineresult"""
 
 	def __init__(self, **kwargs):
 		self.result_id: str = ""
@@ -902,7 +902,7 @@ class InputMessageContent(_Serializable):
 
 
 class InputTextMessageContent(InputMessageContent):
-	"""# https://core.telegram.org/bots/api#inputtextmessagecontent"""
+	"""https://core.telegram.org/bots/api#inputtextmessagecontent"""
 
 	def __init__(self, message_text):
 		self.message_text: str = message_text
@@ -918,14 +918,14 @@ class InputTextMessageContent(InputMessageContent):
 
 
 class InputLocationMessageContent(InputMessageContent, _Location):
-	"""# https://core.telegram.org/bots/api#inputlocationmessagecontent"""
+	"""https://core.telegram.org/bots/api#inputlocationmessagecontent"""
 
 	def __init__(self, latitude: float, longitude: float):
 		_Location.__init__(self, latitude, longitude)
 
 
 class InputVenueMessageContent(InputMessageContent, _Venue):
-	"""# https://core.telegram.org/bots/api#inputvenuemessagecontent"""
+	"""https://core.telegram.org/bots/api#inputvenuemessagecontent"""
 
 	def __init__(self, latitude: float, longitude: float, title: str, address: str):
 		_Venue.__init__(self, title, address)
@@ -934,14 +934,14 @@ class InputVenueMessageContent(InputMessageContent, _Venue):
 
 
 class InputContactMessageContent(InputMessageContent, _Contact):
-	"""# https://core.telegram.org/bots/api#inputcontactmessagecontent"""
+	"""https://core.telegram.org/bots/api#inputcontactmessagecontent"""
 
 	def __init__(self, phone_number: str, first_name: str):
 		_Contact.__init__(self, phone_number, first_name)
 
 
 class InlineQueryResult(_Serializable):
-	"""# https://core.telegram.org/bots/api#inlinequeryresult"""
+	"""https://core.telegram.org/bots/api#inlinequeryresult"""
 
 	def __init__(
 			self,
@@ -966,7 +966,7 @@ class InlineQueryResult(_Serializable):
 
 
 class InlineQueryResultArticle(InlineQueryResult):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultarticle"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultarticle"""
 
 	def __init__(self, id_: str, title: str, input_message_content: InputMessageContent):
 		InlineQueryResult.__init__(self, "article", id_, input_message_content=input_message_content)
@@ -980,7 +980,7 @@ class InlineQueryResultArticle(InlineQueryResult):
 
 
 class InlineQueryResultPhoto(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultphoto"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultphoto"""
 
 	def __init__(self, id_: str, photo_url: str, thumb_url: str):
 		InlineQueryResult.__init__(self, "photo", id_)
@@ -994,7 +994,7 @@ class InlineQueryResultPhoto(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultGif(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultgif"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultgif"""
 
 	def __init__(self, id_: str, gif_url: str):
 		InlineQueryResult.__init__(self, "gif", id_)
@@ -1009,7 +1009,7 @@ class InlineQueryResultGif(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultMpeg4Gif(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultmpeg4gif"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultmpeg4gif"""
 
 	def __init__(self, id_: str, mpeg4_url: str):
 		InlineQueryResult.__init__(self, "mpeg4_gif", id_)
@@ -1025,7 +1025,7 @@ class InlineQueryResultMpeg4Gif(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultVideo(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultvideo"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultvideo"""
 
 	def __init__(self, id_: str, title: str, video_url: str, mime_type: str, thumb_url: str):
 		InlineQueryResult.__init__(self, "video", id_)
@@ -1043,7 +1043,7 @@ class InlineQueryResultVideo(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultAudio(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultaudio"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultaudio"""
 
 	def __init__(self, id_: str, title: str, audio_url: str):
 		InlineQueryResult.__init__(self, "audio", id_)
@@ -1055,7 +1055,7 @@ class InlineQueryResultAudio(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultVoice(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultvoice"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultvoice"""
 
 	def __init__(self, id_: str, title: str, voice_url: str):
 		InlineQueryResult.__init__(self, "voice", id_)
@@ -1066,7 +1066,7 @@ class InlineQueryResultVoice(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultDocument(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultdocument"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultdocument"""
 
 	def __init__(self, id_: str, title: str, document_url: str, mime_type: str):
 		InlineQueryResult.__init__(self, "document", id_)
@@ -1082,7 +1082,7 @@ class InlineQueryResultDocument(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultLocation(InlineQueryResult, _Location):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultlocation"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultlocation"""
 
 	def __init__(self, id_: str, latitude: float, longitude: float, title: str):
 		InlineQueryResult.__init__(self, "location", id_)
@@ -1095,7 +1095,7 @@ class InlineQueryResultLocation(InlineQueryResult, _Location):
 
 
 class InlineQueryResultVenue(InlineQueryResult, _Venue):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultvenue"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultvenue"""
 
 	def __init__(self, id_: str, latitude: float, longitude: float, title: str, address: str):
 		InlineQueryResult.__init__(self, "venue", id_)
@@ -1110,7 +1110,7 @@ class InlineQueryResultVenue(InlineQueryResult, _Venue):
 
 
 class InlineQueryResultContact(InlineQueryResult, _Contact):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultcontact"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultcontact"""
 
 	def __init__(self, id_: str, phone_number: str, first_name: str):
 		InlineQueryResult.__init__(self, "contact", id_)
@@ -1122,7 +1122,7 @@ class InlineQueryResultContact(InlineQueryResult, _Contact):
 
 
 class InlineQueryResultGame(InlineQueryResult):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultgame"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultgame"""
 
 	def __init__(self, id_: str, game_short_name: str):
 		InlineQueryResult.__init__(self, "game", id_)
@@ -1130,7 +1130,7 @@ class InlineQueryResultGame(InlineQueryResult):
 
 
 class InlineQueryResultCachedPhoto(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultcachedphoto"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultcachedphoto"""
 
 	def __init__(self, id_: str, photo_file_id: str):
 		InlineQueryResult.__init__(self, "photo", id_)
@@ -1142,7 +1142,7 @@ class InlineQueryResultCachedPhoto(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultCachedGif(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultcachedgif"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultcachedgif"""
 
 	def __init__(self, id_: str, gif_file_id: str):
 		InlineQueryResult.__init__(self, "gif", id_)
@@ -1153,7 +1153,7 @@ class InlineQueryResultCachedGif(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultCachedMpeg4Gif(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultcachedmpeg4gif"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultcachedmpeg4gif"""
 
 	def __init__(self, id_: str, mpeg4_file_id: str):
 		InlineQueryResult.__init__(self, "mpeg4_gif", id_)
@@ -1163,7 +1163,7 @@ class InlineQueryResultCachedMpeg4Gif(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultCachedSticker(InlineQueryResult):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultcachedsticker"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultcachedsticker"""
 
 	def __init__(self, id_: str, sticker_file_id: str):
 		InlineQueryResult.__init__(self, "sticker", id_)
@@ -1171,7 +1171,7 @@ class InlineQueryResultCachedSticker(InlineQueryResult):
 
 
 class InlineQueryResultCachedDocument(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultcacheddocument"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultcacheddocument"""
 
 	def __init__(self, id_: str, title: str, document_file_id: str):
 		InlineQueryResult.__init__(self, "document", id_)
@@ -1183,7 +1183,7 @@ class InlineQueryResultCachedDocument(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultCachedVideo(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultcachedvideo"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultcachedvideo"""
 
 	def __init__(self, id_: str, title: str, video_file_id: str):
 		InlineQueryResult.__init__(self, "video", id_)
@@ -1195,7 +1195,7 @@ class InlineQueryResultCachedVideo(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultCachedVoice(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultcachedvoice"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultcachedvoice"""
 
 	def __init__(self, id_: str, title: str, voice_file_id: str):
 		InlineQueryResult.__init__(self, "voice", id_)
@@ -1207,7 +1207,7 @@ class InlineQueryResultCachedVoice(InlineQueryResult, _Caption):
 
 
 class InlineQueryResultCachedAudio(InlineQueryResult, _Caption):
-	"""# https://core.telegram.org/bots/api#inlinequeryresultcachedaudio"""
+	"""https://core.telegram.org/bots/api#inlinequeryresultcachedaudio"""
 
 	def __init__(self, id_: str, audio_file_id: str):
 		InlineQueryResult.__init__(self, "audio", id_)
@@ -1216,7 +1216,7 @@ class InlineQueryResultCachedAudio(InlineQueryResult, _Caption):
 
 
 class LabeledPrice(_DefaultFieldObject, _Serializable):
-	"""# https://core.telegram.org/bots/api#labeledprice"""
+	"""https://core.telegram.org/bots/api#labeledprice"""
 
 	def __init__(self, label: str, amount: int, **kwargs):
 		self.label: str = label
@@ -1225,7 +1225,7 @@ class LabeledPrice(_DefaultFieldObject, _Serializable):
 
 
 class Invoice(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#invoice"""
+	"""https://core.telegram.org/bots/api#invoice"""
 
 	def __init__(self, **kwargs):
 		self.title: str = ""
@@ -1237,7 +1237,7 @@ class Invoice(_DefaultFieldObject):
 
 
 class ShippingAddress(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#shippingaddress"""
+	"""https://core.telegram.org/bots/api#shippingaddress"""
 
 	def __init__(self, **kwargs):
 		self.country_code: str = ""
@@ -1250,7 +1250,7 @@ class ShippingAddress(_DefaultFieldObject):
 
 
 class OrderInfo(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#orderinfo"""
+	"""https://core.telegram.org/bots/api#orderinfo"""
 
 	def __init__(self, **kwargs):
 		self.name: Optional[str] = None
@@ -1262,7 +1262,7 @@ class OrderInfo(_DefaultFieldObject):
 
 
 class ShippingOption(_Serializable):
-	"""# https://core.telegram.org/bots/api#shippingoption"""
+	"""https://core.telegram.org/bots/api#shippingoption"""
 
 	def __init__(self, id_: str, title: str, prices: List[LabeledPrice]):
 		self.id: str = id_
@@ -1276,7 +1276,7 @@ class ShippingOption(_Serializable):
 
 
 class SuccessfulPayment(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#successfulpayment"""
+	"""https://core.telegram.org/bots/api#successfulpayment"""
 
 	def __init__(self, **kwargs):
 		self.currency: str = ""
@@ -1290,7 +1290,7 @@ class SuccessfulPayment(_DefaultFieldObject):
 
 
 class ShippingQuery(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#shippingquery"""
+	"""https://core.telegram.org/bots/api#shippingquery"""
 
 	def __init__(self, **kwargs):
 		self.id: str = ""
@@ -1301,7 +1301,7 @@ class ShippingQuery(_DefaultFieldObject):
 
 
 class PreCheckoutQuery(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#precheckoutquery"""
+	"""https://core.telegram.org/bots/api#precheckoutquery"""
 
 	def __init__(self, **kwargs):
 		self.id: str = ""
@@ -1317,7 +1317,7 @@ class PreCheckoutQuery(_DefaultFieldObject):
 # https://core.telegram.org/bots/api#telegram-passport
 
 class EncryptedPassportElement(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#encryptedpassportelement"""
+	"""https://core.telegram.org/bots/api#encryptedpassportelement"""
 
 	def __init__(self, **kwargs):
 		self.type: str = ""  # type is reserved word
@@ -1334,7 +1334,7 @@ class EncryptedPassportElement(_DefaultFieldObject):
 
 
 class EncryptedCredentials(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#encryptedcredentials"""
+	"""https://core.telegram.org/bots/api#encryptedcredentials"""
 
 	def __init__(self, **kwargs):
 		self.data: str = ""
@@ -1344,7 +1344,8 @@ class EncryptedCredentials(_DefaultFieldObject):
 
 
 class PassportData(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#passportdata"""
+	"""https://core.telegram.org/bots/api#passportdata"""
+
 	def __init__(self, **kwargs):
 		self.data: List[EncryptedPassportElement] = []
 		self.credentials: EncryptedCredentials = EncryptedCredentials()
@@ -1352,7 +1353,8 @@ class PassportData(_DefaultFieldObject):
 
 
 class PassportFile(_DefaultFieldObject):
-	"""# https://core.telegram.org/bots/api#passportfile"""
+	"""https://core.telegram.org/bots/api#passportfile"""
+
 	def __init__(self, **kwargs):
 		self.file_id: str = ""
 		self.file_unique_id: str = ""
@@ -1362,7 +1364,8 @@ class PassportFile(_DefaultFieldObject):
 
 
 class PassportElementError(_Serializable):
-	"""# https://core.telegram.org/bots/api#passportelementerror"""
+	"""https://core.telegram.org/bots/api#passportelementerror"""
+
 	def __init__(self, source: str, type_: str, message: str, types_check: Optional[Tuple] = None):
 		if types_check:
 			assert type_ in types_check, f'Wrong type "{type_}" not expected.'
@@ -1376,7 +1379,8 @@ class PassportElementError(_Serializable):
 
 
 class PassportElementErrorDataField(PassportElementError):
-	"""# https://core.telegram.org/bots/api#passportelementerrordatafield"""
+	"""https://core.telegram.org/bots/api#passportelementerrordatafield"""
+
 	def __init__(self, type_: str, field_name: str, data_hash: str, message: str):
 		types = ('personal_details', 'passport', 'driver_license', 'identity_card', 'internal_passport', 'address')
 		PassportElementError.__init__(self, "data", type_, message, types)
@@ -1385,7 +1389,8 @@ class PassportElementErrorDataField(PassportElementError):
 
 
 class PassportElementErrorFrontSide(PassportElementError):
-	"""# https://core.telegram.org/bots/api#passportelementerrorfrontside"""
+	"""https://core.telegram.org/bots/api#passportelementerrorfrontside"""
+
 	def __init__(self, type_: str, file_hash: str, message: str):
 		types = ('passport', 'driver_license', 'identity_card', 'internal_passport')
 		PassportElementError.__init__(self, "front_side", type_, message, types)
@@ -1393,7 +1398,8 @@ class PassportElementErrorFrontSide(PassportElementError):
 
 
 class PassportElementErrorReverseSide(PassportElementError):
-	"""# https://core.telegram.org/bots/api#passportelementerrorreverseside"""
+	"""https://core.telegram.org/bots/api#passportelementerrorreverseside"""
+
 	def __init__(self, type_: str, file_hash: str, message: str):
 		types = ('driver_license', 'identity_card')
 		PassportElementError.__init__(self, "reverse_side", type_, message, types)
@@ -1401,7 +1407,8 @@ class PassportElementErrorReverseSide(PassportElementError):
 
 
 class PassportElementErrorSelfie(PassportElementError):
-	"""# https://core.telegram.org/bots/api#passportelementerrorselfie"""
+	"""https://core.telegram.org/bots/api#passportelementerrorselfie"""
+
 	def __init__(self, type_: str, file_hash: str, message: str):
 		types = ('passport', 'driver_license', 'identity_card', 'internal_passport')
 		assert type_ in types, f'Wrong type "{type_}" not expected.'
@@ -1411,7 +1418,8 @@ class PassportElementErrorSelfie(PassportElementError):
 
 
 class PassportElementErrorFile(PassportElementError):
-	"""# https://core.telegram.org/bots/api#passportelementerrorfile"""
+	"""https://core.telegram.org/bots/api#passportelementerrorfile"""
+
 	def __init__(self, type_: str, file_hash: str, message: str):
 		types = (
 			'utility_bill', 'bank_statement', 'rental_agreement', 'passport_registration', 'temporary_registration')
@@ -1422,7 +1430,8 @@ class PassportElementErrorFile(PassportElementError):
 
 
 class PassportElementErrorFiles(PassportElementError):
-	"""# https://core.telegram.org/bots/api#passportelementerrorfiles"""
+	"""https://core.telegram.org/bots/api#passportelementerrorfiles"""
+
 	def __init__(self, type_: str, file_hashes: List[str], message: str):
 		types = (
 			'utility_bill', 'bank_statement', 'rental_agreement', 'passport_registration', 'temporary_registration')
@@ -1431,7 +1440,8 @@ class PassportElementErrorFiles(PassportElementError):
 
 
 class PassportElementErrorTranslationFile(PassportElementError):
-	"""# https://core.telegram.org/bots/api#passportelementerrortranslationfile"""
+	"""https://core.telegram.org/bots/api#passportelementerrortranslationfile"""
+
 	def __init__(self, type_: str, file_hash: str, message: str):
 		types = (
 			'passport', 'driver_license', 'identity_card', 'internal_passport', 'utility_bill', 'bank_statement',
@@ -1441,7 +1451,8 @@ class PassportElementErrorTranslationFile(PassportElementError):
 
 
 class PassportElementErrorTranslationFiles(PassportElementError):
-	"""# https://core.telegram.org/bots/api#passportelementerrortranslationfiles"""
+	"""https://core.telegram.org/bots/api#passportelementerrortranslationfiles"""
+
 	def __init__(self, type_: str, file_hashes: List[str], message: str):
 		types = (
 			'passport', 'driver_license', 'identity_card', 'internal_passport', 'utility_bill', 'bank_statement',
@@ -1452,7 +1463,8 @@ class PassportElementErrorTranslationFiles(PassportElementError):
 
 
 class PassportElementErrorUnspecified(PassportElementError):
-	"""# https://core.telegram.org/bots/api#passportelementerrorunspecified"""
+	"""https://core.telegram.org/bots/api#passportelementerrorunspecified"""
+
 	def __init__(self, type_: str, element_hash: str, message: str):
 		PassportElementError.__init__(self, "unspecified", type_, message)
 		self.element_hash: str = element_hash
@@ -1570,7 +1582,8 @@ class API:
 
 			return conn.getresponse()
 
-	"""# https://core.telegram.org/bots/api"""
+	"""https://core.telegram.org/bots/api"""
+
 	def __init__(self, token: str, host: str = "api.telegram.org"):
 		self.__host: str = host
 		self.__token: str = token
