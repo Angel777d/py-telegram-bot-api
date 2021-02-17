@@ -1553,7 +1553,6 @@ class API:
 				self.buff.write(file.read())
 				self.buff.write(b'\r\n')
 				# print("[Req]", "\r\n...file data...\r\n", end="")
-				pass
 
 		def _write_str(self, value: str):
 			# print("[Req]", value, end="")
