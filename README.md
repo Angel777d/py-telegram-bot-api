@@ -98,11 +98,11 @@ Development done. Tests in progress.
 *   edit_message_live_location
 *   stop_message_live_location
 *   send_venue
+*   send_contact
+*   send_poll
 
 #### Not tested methods
 
-*   send_contact
-*   send_poll
 *   send_dice
 *   send_chat_action
 *   get_user_profile_photos

@@ -82,6 +82,12 @@ class ChatType(Enum):
 	WRONG = "wrong"
 
 
+class PollType(Enum):
+	"""https://core.telegram.org/bots/api#sendpoll"""
+	REGULAR = "regular"
+	QUIZ = "quiz"
+
+
 # service class
 class _Serializable:
 	def serialize(self):
@@ -1969,17 +1975,17 @@ class API:
 			allow_sending_without_reply: Optional[bool] = None,
 			reply_markup: Optional[Keyboards] = None
 
-	) -> MessageId:
-		return MessageId(**self.__simple("sendContact", locals()))
+	) -> Message:
+		return Message(**self.__simple("sendContact", locals()))
 
-	# https://core.telegram.org/bots/api#sendcontact
+	# https://core.telegram.org/bots/api#sendpoll
 	def send_poll(
 			self,
 			chat_id: Union[int, str],
 			question: str,
 			options: List[str],
 			is_anonymous: Optional[bool] = None,
-			type_: Optional[str] = None,
+			type_: Optional[PollType] = PollType.REGULAR,
 			allows_multiple_answers: Optional[bool] = None,
 			correct_option_id: Optional[int] = None,
 			explanation: Optional[str] = None,
@@ -1994,11 +2000,12 @@ class API:
 			allow_sending_without_reply: Optional[bool] = None,
 			reply_markup: Optional[Keyboards] = None
 
-	) -> MessageId:
+	) -> Message:
 		params = _make_optional(locals(), self, type_)
-		params["type"] = type_
+		params["type"] = type_.value
+		assert type_ != PollType.QUIZ or correct_option_id, "correct_option_id must be set for PollType.QUIZ"
 		data = self.__make_request("sendPoll", params=params)
-		return MessageId(**data.get("result"))
+		return Message(**data.get("result"))
 
 	# https://core.telegram.org/bots/api#senddice
 	def send_dice(
@@ -2010,8 +2017,8 @@ class API:
 			allow_sending_without_reply: Optional[bool] = None,
 			reply_markup: Optional[Keyboards] = None
 
-	) -> MessageId:
-		return MessageId(**self.__simple("sendDice", locals()))
+	) -> Message:
+		return Message(**self.__simple("sendDice", locals()))
 
 	# https://core.telegram.org/bots/api#sendchataction
 	def send_chat_action(
