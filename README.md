@@ -18,7 +18,10 @@ All fields and methods of
 [API](https://core.telegram.org/bots/api)
 use [typing](https://docs.python.org/3/library/typing.html).
 
-Support Bot API 5.0 (November 4, 2020).
+Bot API 5.0 (November 4, 2020) is fully supported.
+
+### Disclaimer
+This library and its author neither associated, nor affiliated with Telegram in any way. 
 
 ### Installation
 
