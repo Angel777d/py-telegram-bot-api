@@ -1511,6 +1511,7 @@ _FIELDS = {
 	"selfie": PassportFile,
 	"translation": PassportFile,
 	"location": Location,
+	"venue": Venue,
 }
 
 Keyboards = Union[InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
@@ -1952,8 +1953,8 @@ class API:
 			allow_sending_without_reply: Optional[bool] = None,
 			reply_markup: Optional[Keyboards] = None
 
-	) -> MessageId:
-		return MessageId(**self.__simple("sendVenue", locals()))
+	) -> Message:
+		return Message(**self.__simple("sendVenue", locals()))
 
 	# https://core.telegram.org/bots/api#sendcontact
 	def send_contact(

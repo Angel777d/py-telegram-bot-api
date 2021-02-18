@@ -97,10 +97,10 @@ Development done. Tests in progress.
 *   send_location
 *   edit_message_live_location
 *   stop_message_live_location
+*   send_venue
 
 #### Not tested methods
 
-*   send_venue
 *   send_contact
 *   send_poll
 *   send_dice
