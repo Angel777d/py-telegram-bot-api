@@ -28,7 +28,7 @@ def __ch_list(target, k, v):
 
 
 def __ch_obj(target, k, v):
-	return _FIELDS.get(k, _DefaultFieldObject)(**v) if isinstance(v, dict) else target.parse_field(k, v)
+	return target.get_class(k)(**v) if isinstance(v, dict) else target.parse_field(k, v)
 
 
 def __ser(obj):
@@ -95,11 +95,14 @@ class _DefaultFieldObject:
 		_fill_object(self, kwargs)
 
 	def __repr__(self):
-		return f'[{self.__class__.__name__}] data: {_get_public(self)}'
+		return f'[{self.__class__.__name__}]: {_get_public(self)}'
 
 	@staticmethod
 	def parse_field(name, value):
 		return value
+
+	def get_class(self, field_name: str):
+		return _FIELDS.get(field_name, _DefaultFieldObject)
 
 
 # part class
@@ -748,6 +751,11 @@ class Chat(_DefaultFieldObject):
 		if name == "type":
 			return ChatType(value)
 		return value
+
+	def get_class(self, field_name: str):
+		if field_name == "location":
+			return ChatLocation
+		return super().get_class(field_name)
 
 
 class ChatLocation(_DefaultFieldObject):
@@ -1502,7 +1510,7 @@ _FIELDS = {
 	"reverse_side": PassportFile,
 	"selfie": PassportFile,
 	"translation": PassportFile,
-	"location": ChatLocation,
+	"location": Location,
 }
 
 Keyboards = Union[InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply]
@@ -1895,8 +1903,8 @@ class API:
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
 			reply_markup: Optional[Keyboards] = None
-	) -> MessageId:
-		return MessageId(**self.__simple("sendLocation", locals()))
+	) -> Message:
+		return Message(**self.__simple("sendLocation", locals()))
 
 	# https://core.telegram.org/bots/api#editmessagelivelocation
 	def edit_message_live_location(
@@ -1910,11 +1918,10 @@ class API:
 			heading: Optional[int] = None,
 			proximity_alert_radius: Optional[int] = None,
 			reply_markup: Optional[Keyboards] = None
-	) -> Union[MessageId, bool]:
+	) -> Union[Message, bool]:
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
 		data = self.__simple("editMessageLiveLocation", locals())
-		result = bool(data) if inline_message_id else MessageId(**data)
-		return result
+		return bool(data) if inline_message_id else Message(**data)
 
 	# https://core.telegram.org/bots/api#stopmessagelivelocation
 	def stop_message_live_location(
@@ -1923,11 +1930,10 @@ class API:
 			message_id: Optional[int] = None,
 			inline_message_id: Optional[str] = None,
 			reply_markup: Optional[Keyboards] = None
-	) -> Union[MessageId, bool]:
+	) -> Union[Message, bool]:
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
 		data = self.__simple("stopMessageLiveLocation", locals())
-		result = bool(data) if inline_message_id else MessageId(**data)
-		return result
+		return bool(data) if inline_message_id else Message(**data)
 
 	# https://core.telegram.org/bots/api#sendvenue
 	def send_venue(

@@ -92,11 +92,11 @@ Development done. Tests in progress.
 *   send_video_note
 *   send_media_group
 *   send_location
+*   edit_message_live_location
+*   stop_message_live_location
 
 #### Not tested methods
 
-*   edit_message_live_location
-*   stop_message_live_location
 *   send_venue
 *   send_contact
 *   send_poll
