@@ -1591,10 +1591,7 @@ class API:
 
 	# https://core.telegram.org/bots/api#getupdates
 	def get_updates(self, offset=None, limit=None, timeout=None, allowed_updates=None) -> List[Update]:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("getUpdates", params=params)
-		update_list = data.get("result", None)
-		return [Update(**d) for d in update_list]
+		return [Update(**d) for d in self.__simple("getUpdates", locals())]
 
 	# https://core.telegram.org/bots/api#setwebhook
 	def set_webhook(
@@ -1617,9 +1614,7 @@ class API:
 
 	# https://core.telegram.org/bots/api#deletewebhook
 	def delete_webhook(self, drop_pending_updates: Optional[bool] = None) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("deleteWebhook", params=params)
-		return bool(data.get("result"))
+		return bool(self.__simple("deleteWebhook", locals()))
 
 	# https://core.telegram.org/bots/api#getwebhookinfo
 	def get_webhook_info(self) -> WebhookInfo:
@@ -1628,18 +1623,15 @@ class API:
 
 	# https://core.telegram.org/bots/api#getme
 	def get_me(self) -> User:
-		data = self.__make_request("getMe", params={})
-		return User(**data.get("result"))
+		return User(**self.__simple("getMe", {}))
 
 	# https://core.telegram.org/bots/api#logout
 	def log_out(self) -> bool:
-		data = self.__make_request("logOut", params={})
-		return bool(data.get("result"))
+		return bool(self.__simple("logOut", {}))
 
 	# https://core.telegram.org/bots/api#close
 	def close(self) -> bool:
-		data = self.__make_request("close", params={})
-		return bool(data.get("result"))
+		return bool(self.__simple("close", {}))
 
 	# https://core.telegram.org/bots/api#sendmessage
 	def send_message(
@@ -1655,9 +1647,7 @@ class API:
 			reply_markup: Optional[Keyboards] = None
 	) -> Message:
 		# assert not (parse_mode and entities)
-		params = _make_optional(locals(), self)
-		data = self.__make_request("sendMessage", params=params)
-		return Message(**data.get("result"))
+		return Message(**self.__simple("sendMessage", locals()))
 
 	# https://core.telegram.org/bots/api#forwardmessage
 	def forward_message(
@@ -1667,9 +1657,7 @@ class API:
 			message_id: int,
 			disable_notification: Optional[bool] = None
 	) -> Message:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("forwardMessage", params=params)
-		return Message(**data.get("result"))
+		return Message(**self.__simple("forwardMessage", locals()))
 
 	# https://core.telegram.org/bots/api#copymessage
 	def copy_message(
@@ -1685,9 +1673,7 @@ class API:
 			allow_sending_without_reply: Optional[bool] = None,
 			reply_markup: Optional[Keyboards] = None
 	) -> MessageId:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("copyMessage", params=params)
-		return MessageId(**data.get("result"))
+		return MessageId(**self.__simple("copyMessage", locals()))
 
 	# https://core.telegram.org/bots/api#sendphoto
 	def send_photo(
@@ -1909,11 +1895,8 @@ class API:
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
 			reply_markup: Optional[Keyboards] = None
-
 	) -> MessageId:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("sendLocation", params=params)
-		return MessageId(**data.get("result"))
+		return MessageId(**self.__simple("sendLocation", locals()))
 
 	# https://core.telegram.org/bots/api#editmessagelivelocation
 	def edit_message_live_location(
@@ -1927,12 +1910,10 @@ class API:
 			heading: Optional[int] = None,
 			proximity_alert_radius: Optional[int] = None,
 			reply_markup: Optional[Keyboards] = None
-
 	) -> Union[MessageId, bool]:
-		params = _make_optional(locals(), self)
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
-		data = self.__make_request("editMessageLiveLocation", params=params)
-		result = bool(data.get("result")) if inline_message_id else MessageId(**data.get("result"))
+		data = self.__simple("editMessageLiveLocation", locals())
+		result = bool(data) if inline_message_id else MessageId(**data)
 		return result
 
 	# https://core.telegram.org/bots/api#stopmessagelivelocation
@@ -1942,12 +1923,10 @@ class API:
 			message_id: Optional[int] = None,
 			inline_message_id: Optional[str] = None,
 			reply_markup: Optional[Keyboards] = None
-
 	) -> Union[MessageId, bool]:
-		params = _make_optional(locals(), self)
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
-		data = self.__make_request("stopMessageLiveLocation", params=params)
-		result = bool(data.get("result")) if inline_message_id else MessageId(**data.get("result"))
+		data = self.__simple("stopMessageLiveLocation", locals())
+		result = bool(data) if inline_message_id else MessageId(**data)
 		return result
 
 	# https://core.telegram.org/bots/api#sendvenue
@@ -1968,9 +1947,7 @@ class API:
 			reply_markup: Optional[Keyboards] = None
 
 	) -> MessageId:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("sendVenue", params=params)
-		return MessageId(**data.get("result"))
+		return MessageId(**self.__simple("sendVenue", locals()))
 
 	# https://core.telegram.org/bots/api#sendcontact
 	def send_contact(
@@ -1986,9 +1963,7 @@ class API:
 			reply_markup: Optional[Keyboards] = None
 
 	) -> MessageId:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("sendContact", params=params)
-		return MessageId(**data.get("result"))
+		return MessageId(**self.__simple("sendContact", locals()))
 
 	# https://core.telegram.org/bots/api#sendcontact
 	def send_poll(
@@ -2029,9 +2004,7 @@ class API:
 			reply_markup: Optional[Keyboards] = None
 
 	) -> MessageId:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("sendDice", params=params)
-		return MessageId(**data.get("result"))
+		return MessageId(**self.__simple("sendDice", locals()))
 
 	# https://core.telegram.org/bots/api#sendchataction
 	def send_chat_action(
@@ -2039,9 +2012,7 @@ class API:
 			chat_id: Union[int, str],
 			action: Optional[str] = None,
 	) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("sendChatAction", params=params)
-		return bool(data.get("result"))
+		return bool(self.__simple("sendChatAction", locals()))
 
 	# https://core.telegram.org/bots/api#getuserprofilephotos
 	def get_user_profile_photos(
@@ -2050,26 +2021,19 @@ class API:
 			offset: Optional[int] = None,
 			limit: Optional[int] = None,
 	) -> UserProfilePhotos:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("getUserProfilePhotos", params=params)
-		return UserProfilePhotos(**data.get("result"))
+		return UserProfilePhotos(**self.__simple("getUserProfilePhotos", locals()))
 
 	# https://core.telegram.org/bots/api#getfile
 	def get_file(self, file_id: str) -> File:
-		data = self.__make_request("getFile", params={"file_id": file_id})
-		return File(**data.get("result"))
+		return File(**self.__simple("getFile", {"file_id": file_id}))
 
 	# https://core.telegram.org/bots/api#kickchatmember
 	def kick_chat_member(self, chat_id: Union[int, str], user_id: int, until_date: Optional[int] = None) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("kickChatMember", params=params)
-		return bool(data.get("result"))
+		return bool(self.__simple("kickChatMember", locals()))
 
 	# https://core.telegram.org/bots/api#unbanchatmember
 	def unban_chat_member(self, chat_id: Union[int, str], user_id: int, only_if_banned: Optional[bool] = None) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("unbanChatMember", params=params)
-		return bool(data.get("result"))
+		return bool(self.__simple("unbanChatMember", locals()))
 
 	# https://core.telegram.org/bots/api#restrictchatmember
 	def restrict_chat_member(
@@ -2079,9 +2043,7 @@ class API:
 			permissions: ChatPermissions,
 			until_date: Optional[int] = None
 	) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("restrictChatMember", params=params)
-		return bool(data.get("result"))
+		return bool(self.__simple("restrictChatMember", locals()))
 
 	# https://core.telegram.org/bots/api#promotechatmember
 	def promote_chat_member(
@@ -2098,9 +2060,7 @@ class API:
 			can_pin_messages: Optional[bool] = None,
 			can_promote_members: Optional[bool] = None
 	) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("promoteChatMember", params=params)
-		return bool(data.get("result"))
+		return bool(self.__simple("promoteChatMember", locals()))
 
 	# https://core.telegram.org/bots/api#setchatadministratorcustomtitle
 	def set_chat_administrator_custom_title(
@@ -2109,9 +2069,7 @@ class API:
 			user_id: int,
 			custom_title: str,
 	) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("setChatAdministratorCustomTitle", params=params)
-		return bool(data.get("result"))
+		return bool(self.__simple("setChatAdministratorCustomTitle", locals()))
 
 	# https://core.telegram.org/bots/api#setchatpermissions
 	def set_chat_permissions(
@@ -2119,13 +2077,11 @@ class API:
 			chat_id: Union[int, str],
 			permissions: ChatPermissions,
 	) -> bool:
-		data = self.__make_request("setChatPermissions", {"chat_id": chat_id, "permissions": permissions})
-		return bool(data.get("result"))
+		return bool(self.__simple("setChatPermissions", {"chat_id": chat_id, "permissions": permissions}))
 
 	# https://core.telegram.org/bots/api#exportchatinvitelink
 	def export_chat_invite_link(self, chat_id: Union[int, str]) -> str:
-		data = self.__make_request("exportChatInviteLink", {"chat_id": chat_id})
-		return str(data.get("result"))
+		return str(self.__simple("exportChatInviteLink", {"chat_id": chat_id}))
 
 	# https://core.telegram.org/bots/api#setchatphoto
 	def set_chat_photo(
@@ -2142,18 +2098,15 @@ class API:
 
 	# https://core.telegram.org/bots/api#deletechatphoto
 	def delete_chat_photo(self, chat_id: Union[int, str]) -> bool:
-		data = self.__make_request("deleteChatPhoto", {"chat_id": chat_id})
-		return bool(data.get("result"))
+		return bool(self.__simple("deleteChatPhoto", {"chat_id": chat_id}))
 
 	# https://core.telegram.org/bots/api#setchattitle
 	def set_chat_title(self, chat_id: Union[int, str], title: str) -> bool:
-		data = self.__make_request("setChatTitle", {"chat_id": chat_id, "title": title})
-		return bool(data.get("result"))
+		return bool(self.__simple("setChatTitle", {"chat_id": chat_id, "title": title}))
 
 	# https://core.telegram.org/bots/api#setchatdescription
 	def set_chat_description(self, chat_id: Union[int, str], description: str) -> bool:
-		data = self.__make_request("setChatDescription", {"chat_id": chat_id, "description": description})
-		return bool(data.get("result"))
+		return bool(self.__simple("setChatDescription", {"chat_id": chat_id, "description": description}))
 
 	# https://core.telegram.org/bots/api#pinchatmessage
 	def pin_chat_message(
@@ -2162,50 +2115,39 @@ class API:
 			message_id: int,
 			disable_notification: Optional[bool] = None
 	) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("pinChatMessage", params)
-		return bool(data.get("result"))
+		return bool(self.__simple("pinChatMessage", locals()))
 
 	# https://core.telegram.org/bots/api#unpinchatmessage
 	def unpin_chat_message(self, chat_id: Union[int, str], message_id: Optional[int]) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("unpinChatMessage", params)
-		return bool(data.get("result"))
+		return bool(self.__simple("unpinChatMessage", locals()))
 
 	# https://core.telegram.org/bots/api#unpinallchatmessages
 	def unpin_all_chat_messages(self, chat_id: Union[int, str]) -> bool:
-		data = self.__make_request("unpinAllChatMessages", {"chat_id": chat_id})
-		return bool(data.get("result"))
+		return bool(self.__simple("unpinAllChatMessages", {"chat_id": chat_id}))
 
 	# https://core.telegram.org/bots/api#leavechat
 	def leave_chat(self, chat_id: Union[int, str]) -> bool:
-		data = self.__make_request("leaveChat", {"chat_id": chat_id})
-		return bool(data.get("result"))
+		return bool(self.__simple("leaveChat", {"chat_id": chat_id}))
 
 	# https://core.telegram.org/bots/api#getchat
 	def get_chat(self, chat_id: Union[int, str]) -> Chat:
-		data = self.__make_request("getChat", {"chat_id": chat_id})
-		return Chat(**data.get("result"))
+		return Chat(**self.__simple("getChat", {"chat_id": chat_id}))
 
 	# https://core.telegram.org/bots/api#getchatadministrators
 	def get_chat_administrators(self, chat_id: Union[int, str]) -> List[ChatMember]:
-		data = self.__make_request("getChatAdministrators", {"chat_id": chat_id})
-		return [ChatMember(**d) for d in data.get("result")]
+		return [ChatMember(**d) for d in self.__simple("getChatAdministrators", {"chat_id": chat_id})]
 
 	# https://core.telegram.org/bots/api#getchatmemberscount
 	def get_chat_members_count(self, chat_id: Union[int, str]) -> int:
-		data = self.__make_request("getChatMembersCount", {"chat_id": chat_id})
-		return int(data.get("result"))
+		return int(self.__simple("getChatMembersCount", {"chat_id": chat_id}))
 
 	# https://core.telegram.org/bots/api#getchatmemberscount
 	def get_chat_member(self, chat_id: Union[int, str], user_id: int) -> ChatMember:
-		data = self.__make_request("getChatMember", {"chat_id": chat_id, "user_id": user_id})
-		return ChatMember(**data.get("result"))
+		return ChatMember(**self.__simple("getChatMember", {"chat_id": chat_id, "user_id": user_id}))
 
 	# https://core.telegram.org/bots/api#setchatstickerset
 	def set_chat_sticker_set(self, chat_id: Union[int, str], sticker_set_name: str) -> bool:
-		data = self.__make_request("setChatStickerSet", {"chat_id": chat_id, "sticker_set_name": sticker_set_name})
-		return bool(data.get("result"))
+		return bool(self.__simple("setChatStickerSet", {"chat_id": chat_id, "sticker_set_name": sticker_set_name}))
 
 	# https://core.telegram.org/bots/api#deletechatstickerset
 	def delete_chat_sticker_set(self, chat_id: Union[int, str]) -> bool:
@@ -2221,9 +2163,7 @@ class API:
 			url: Optional[str] = None,
 			cache_time: Optional[int] = None
 	) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("answerCallbackQuery", params=params)
-		return bool(data.get("result"))
+		return bool(self.__simple("answerCallbackQuery", locals()))
 
 	# https://core.telegram.org/bots/api#setmycommands
 	def set_my_commands(self, commands: List[BotCommand]) -> bool:
@@ -2247,10 +2187,8 @@ class API:
 			disable_web_page_preview: Optional[bool] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
-		params = _make_optional(locals(), self)
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
-		data = self.__make_request("editMessageText", params)
-		return Message(**data.get("result"))
+		return Message(**self.__simple("editMessageText", locals()))
 
 	# https://core.telegram.org/bots/api#editmessagecaption
 	def edit_message_caption(
@@ -2263,10 +2201,8 @@ class API:
 			caption_entities: Optional[List[MessageEntity]] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
-		params = _make_optional(locals(), self)
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
-		data = self.__make_request("editMessageCaption", params)
-		return Message(**data.get("result"))
+		return Message(**self.__simple("editMessageCaption", locals()))
 
 	# https://core.telegram.org/bots/api#editmessagecaption
 	def edit_message_media(
@@ -2277,11 +2213,9 @@ class API:
 			inline_message_id: Optional[str] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
-		params = _make_optional(locals(), self)
 		assert isinstance(media.media, str), "can't upload file while edit message"
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
-		data = self.__make_request("editMessageMedia", params)
-		return Message(**data.get("result"))
+		return Message(**self.__simple("editMessageMedia", locals()))
 
 	# https://core.telegram.org/bots/api#editmessagereplymarkup
 	def edit_message_reply_markup(
@@ -2290,12 +2224,10 @@ class API:
 			message_id: Optional[int] = None,
 			inline_message_id: Optional[str] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
-	) -> Message:
-		params = _make_optional(locals(), self)
+	) -> Union[bool, Message]:
 		assert (chat_id and message_id) or inline_message_id, "chat_id and message_id or inline_message_id must be set"
-		data = self.__make_request("editMessageReplyMarkup", params)
-		result = bool(data.get("result")) if inline_message_id else Message(**data.get("result"))
-		return result
+		data = self.__simple("editMessageReplyMarkup", locals())
+		return bool(data) if inline_message_id else Message(**data)
 
 	# https://core.telegram.org/bots/api#stoppoll
 	def stop_poll(
@@ -2304,14 +2236,11 @@ class API:
 			message_id: int,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Poll:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("stopPoll", params)
-		return Poll(**data.get("result"))
+		return Poll(**self.__simple("stopPoll", locals()))
 
 	# https://core.telegram.org/bots/api#deletemessage
 	def delete_message(self, chat_id: Union[int, str], message_id: int) -> bool:
-		data = self.__make_request("deleteMessage", {"chat_id": chat_id, "message_id": message_id})
-		return bool(data.get("result"))
+		return bool(self.__simple("deleteMessage", {"chat_id": chat_id, "message_id": message_id}))
 
 	# https://core.telegram.org/bots/api#sendsticker
 	def send_sticker(
@@ -2334,8 +2263,7 @@ class API:
 
 	# https://core.telegram.org/bots/api#getstickerset
 	def get_sticker_set(self, name: str) -> StickerSet:
-		data = self.__make_request("getStickerSet", {"name": name})
-		return StickerSet(**data.get("result"))
+		return StickerSet(**self.__simple("getStickerSet", {"name": name}))
 
 	# https://core.telegram.org/bots/api#uploadstickerfile
 	def upload_sticker_file(
@@ -2392,13 +2320,11 @@ class API:
 
 	# https://core.telegram.org/bots/api#setstickerpositioninset
 	def set_sticker_position_in_set(self, sticker: str, position: int) -> bool:
-		data = self.__make_request("setStickerPositionInSet", {"sticker": sticker, "position": position})
-		return bool(data.get("result"))
+		return bool(self.__simple("setStickerPositionInSet", {"sticker": sticker, "position": position}))
 
 	# https://core.telegram.org/bots/api#deletestickerfromset
 	def delete_sticker_from_set(self, sticker: str) -> bool:
-		data = self.__make_request("deleteStickerFromSet", {"sticker": sticker})
-		return bool(data.get("result"))
+		return bool(self.__simple("deleteStickerFromSet", {"sticker": sticker}))
 
 	# https://core.telegram.org/bots/api#setstickersetthumb
 	def set_sticker_set_thumb(
@@ -2426,9 +2352,7 @@ class API:
 			switch_pm_text: Optional[str] = None,
 			switch_pm_parameter: Optional[str] = None,
 	) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("answerInlineQuery", params)
-		return bool(data.get("result"))
+		return bool(self.__simple("answerInlineQuery", locals()))
 
 	# https://core.telegram.org/bots/api#sendinvoice
 	def send_invoice(
@@ -2457,10 +2381,8 @@ class API:
 			reply_to_message_id: Optional[int] = None,
 			allow_sending_without_reply: Optional[bool] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
-	):
-		params = _make_optional(locals(), self)
-		data = self.__make_request("sendInvoice", params)
-		return Message(**data.get("result"))
+	) -> Message:
+		return Message(**self.__simple("sendInvoice", locals()))
 
 	# https://core.telegram.org/bots/api#answershippingquery
 	def answer_shipping_query(
@@ -2469,11 +2391,9 @@ class API:
 			ok: bool,
 			shipping_options: Optional[List[ShippingOption]] = None,
 			error_message: Optional[str] = None,
-	):
+	) -> bool:
 		assert ok or error_message, "error_message Required if ok is False"
-		params = _make_optional(locals(), self)
-		data = self.__make_request("answerShippingQuery", params)
-		return bool(data.get("result"))
+		return bool(self.__simple("answerShippingQuery", locals()))
 
 	# https://core.telegram.org/bots/api#answerprecheckoutquery
 	def answer_pre_checkout_query(
@@ -2481,16 +2401,12 @@ class API:
 			pre_checkout_query_id: str,
 			ok: bool,
 			error_message: Optional[str] = None,
-	):
+	) -> bool:
 		assert ok or error_message, "error_message Required if ok is False"
-		params = _make_optional(locals(), self)
-		data = self.__make_request("answerPreCheckoutQuery", params)
-		return bool(data.get("result"))
+		return bool(self.__simple("answerPreCheckoutQuery", locals()))
 
 	def set_passport_data_errors(self, user_id: int, errors: List[PassportElementError]) -> bool:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("setPassportDataErrors", params)
-		return bool(data.get("result"))
+		return bool(self.__simple("setPassportDataErrors", locals()))
 
 	def send_game(
 			self,
@@ -2501,9 +2417,7 @@ class API:
 			allow_sending_without_reply: Optional[bool] = None,
 			reply_markup: Optional[InlineKeyboardMarkup] = None,
 	) -> Message:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("sendGame", params)
-		return Message(**data.get("result"))
+		return Message(**self.__simple("sendGame", locals()))
 
 	def get_game_high_scores(
 			self,
@@ -2512,9 +2426,7 @@ class API:
 			message_id: Optional[int] = None,
 			inline_message_id: Optional[str] = None,
 	) -> List[GameHighScore]:
-		params = _make_optional(locals(), self)
-		data = self.__make_request("getGameHighScores", params)
-		return [GameHighScore(**d) for d in data.get("result")]
+		return [GameHighScore(**d) for d in self.__simple("getGameHighScores", locals())]
 
 	def __get_url(self, api_method) -> str:
 		return f'https://{self.__host}/bot{self.__token}/{api_method}'
@@ -2523,6 +2435,11 @@ class API:
 		url = self.__get_url(api_method)
 		resp = form.make_request(self.__host, url)
 		return self.__process_response(resp)
+
+	def __simple(self, method: str, params: dict) -> Union[bool, str, int, dict, list]:
+		params = _make_optional(params, self)
+		data = self.__make_request(method, params)
+		return data.get("result")
 
 	def __make_request(self, api_method: str, params: Optional[dict] = None, method="POST"):
 
