@@ -6,13 +6,14 @@ from telegram_bot_api import API, Update
 
 
 class Pooling:
-	def __init__(self, api, handler: Callable[[Update], None], update_time: float = 5):
+	def __init__(self, api, handler: Callable[[Update], None], update_time: float = 5, dev_mode: bool = False):
 		self.__api: API = api
 		self.__handler: Callable[[Update], None] = handler
 		self.__update_time: float = update_time
 		self.__pooling: [Thread, None] = None
 		self.__lastUpdate: int = 0
 		self.__isRunning = False
+		self.__dev_mode = dev_mode
 
 	def start(self):
 		if self.__pooling:
@@ -33,11 +34,13 @@ class Pooling:
 	def __request_update(self):
 		# print("[Pooling] started")
 		while self.__isRunning:
-			# self.__do_request()
-			try:
+			if self.__dev_mode:
 				self.__do_request()
-			except Exception as ex:
-				print("[Pooling] got exception", ex)
+			else:
+				try:
+					self.__do_request()
+				except Exception as ex:
+					print("[Pooling] got exception", ex)
 			sleep(self.__update_time)
 		self.__pooling = None
 		# print("[Pooling] stopped")
