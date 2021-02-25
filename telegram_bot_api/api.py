@@ -309,11 +309,12 @@ class InlineQuery(_DefaultFieldObject):
 
 	def __init__(self, **kwargs):
 		self.id: str = ""  # Unique identifier for this query
-		self.from_user: User = User()
 		self.location: Optional[Location] = None
 		self.query: str = ""  # Text of the query (up to 256 characters)
 		self.offset: str = ""  # Offset of the results to be returned, can be controlled by the bot
 		_DefaultFieldObject.__init__(self, **kwargs)
+		# we can't use "from" word in code
+		self.from_user: User = getattr(self, "from", None)
 
 
 class CallbackQuery(_DefaultFieldObject):
@@ -321,13 +322,14 @@ class CallbackQuery(_DefaultFieldObject):
 
 	def __init__(self, **kwargs):
 		self.id: str = ""
-		self.from_user: User = User()
 		self.message: Optional[Message] = None
 		self.inline_message_id: Optional[str] = None
 		self.chat_instance: Optional[str] = None
 		self.data: Optional[str] = None
 		self.game_short_name: Optional[str] = None
 		_DefaultFieldObject.__init__(self, **kwargs)
+		# we can't use "from" word in code
+		self.from_user: User = getattr(self, "from", None)
 
 
 class PollOption(_DefaultFieldObject):
@@ -901,11 +903,12 @@ class ChosenInlineResult(_DefaultFieldObject):
 
 	def __init__(self, **kwargs):
 		self.result_id: str = ""
-		self.from_user: User = User()
 		self.location: Optional[Location] = None
 		self.inline_message_id: Optional[str] = None
 		self.query: str = ""
 		_DefaultFieldObject.__init__(self, **kwargs)
+		# we can't use "from" word in code
+		self.from_user: User = getattr(self, "from", None)
 
 
 class InputMessageContent(_Serializable):
@@ -1307,10 +1310,11 @@ class ShippingQuery(_DefaultFieldObject):
 
 	def __init__(self, **kwargs):
 		self.id: str = ""
-		self.from_user: User = User()
 		self.invoice_payload: str = ''
 		self.shipping_address: ShippingAddress = ShippingAddress()
 		_DefaultFieldObject.__init__(self, **kwargs)
+		# we can't use "from" word in code
+		self.from_user: User = getattr(self, "from", None)
 
 
 class PreCheckoutQuery(_DefaultFieldObject):
@@ -1318,13 +1322,14 @@ class PreCheckoutQuery(_DefaultFieldObject):
 
 	def __init__(self, **kwargs):
 		self.id: str = ""
-		self.from_user: User = User()
 		self.currency: str = ""
 		self.total_amount: int = 0
 		self.invoice_payload: str = ""
 		self.shipping_option_id: Optional[str] = None
 		self.order_info: Optional[OrderInfo] = None
 		_DefaultFieldObject.__init__(self, **kwargs)
+		# we can't use "from" word in code
+		self.from_user: User = getattr(self, "from", None)
 
 
 # https://core.telegram.org/bots/api#telegram-passport
@@ -1510,6 +1515,7 @@ _FIELDS = {
 	"edited_channel_post": Message,
 	"inline_query": InlineQuery,
 	"chosen_inline_result": ChosenInlineResult,
+	"callback_query": CallbackQuery,
 	"photos": PhotoSize,
 	"option": PollOption,
 	"stickers": Sticker,
