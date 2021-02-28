@@ -200,6 +200,8 @@ class InputMedia(_Serializable, _Caption):
 			result["media"] = self.media
 		else:
 			result["media"] = f'attach://{self.media.file_name}'
+		if self.caption_entities:
+			result["caption_entities"] = [c.serialize() for c in self.caption_entities]
 		return result
 
 
@@ -520,6 +522,8 @@ class InlineKeyboardButton(_Serializable):
 		if self.callback_game:
 			result["callback_game"] = self.callback_game.serialize()
 		assert len(result) == 2, "[InlineKeyboardButton] You must use exactly one of the optional fields"
+		if self.callback_data:
+			assert len(self.callback_data) <= 64, "[InlineKeyboardButton] callback_data must be not longer than 64"
 		return result
 
 
