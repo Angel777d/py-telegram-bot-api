@@ -8,8 +8,12 @@ def get_value(entity: MessageEntity, text: str) -> str:
 	return text[entity.offset:entity.offset + entity.length]
 
 
+def get_entities(text: str, entities: List[MessageEntity], entity_type: MessageEntityType) -> Tuple[str]:
+	return tuple(get_value(e, text) for e in entities if e.type == entity_type) if entities else tuple()
+
+
 def get_entities_by_type(message: Message, entity_type: MessageEntityType) -> Tuple[str]:
-	return tuple(get_value(e, message.text) for e in message.entities if e.type == entity_type)
+	return get_entities(message.text, message.entities, entity_type)
 
 
 class MessageBuilder:
@@ -27,7 +31,7 @@ class MessageBuilder:
 	):
 		if entity_type == MessageEntityType.WRONG:
 			self.__text.write(text)
-			return
+			return self
 		offset = self.__text.tell()
 		entity_text = f'{self.get_prefix(entity_type)}{text}'
 		entity = MessageEntity(type=entity_type, offset=offset, length=len(entity_text))
@@ -42,6 +46,7 @@ class MessageBuilder:
 			entity.language = language
 		self.__text.write(entity_text)
 		self.__entities.append(entity)
+		return self
 
 	@staticmethod
 	def get_prefix(entity_type: MessageEntityType):
