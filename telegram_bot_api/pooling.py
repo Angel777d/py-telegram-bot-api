@@ -41,6 +41,8 @@ class Pooling:
 					self.__do_request()
 				except Exception as ex:
 					print("[Pooling] got exception", ex)
+					import traceback
+					traceback.print_exc()
 			sleep(self.__update_time)
 		self.__pooling = None
 		# print("[Pooling] stopped")
