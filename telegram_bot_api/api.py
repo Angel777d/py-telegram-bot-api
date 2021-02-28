@@ -1504,6 +1504,7 @@ _FIELDS = {
 	"forward_from_chat": Chat,
 	"from": User,
 	"user": User,
+	"via_bot": User,
 	"mask_position": MaskPosition,
 	"thumb": PhotoSize,
 	"anim": Video,
