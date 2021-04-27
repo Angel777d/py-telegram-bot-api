@@ -13,6 +13,8 @@ def get_entities(text: str, entities: List[MessageEntity], entity_type: MessageE
 
 
 def get_entities_by_type(message: Message, entity_type: MessageEntityType) -> Tuple[str]:
+	if not message:
+		return tuple()
 	return get_entities(message.text, message.entities, entity_type)
 
 

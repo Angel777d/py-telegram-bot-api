@@ -494,6 +494,25 @@ class CallbackGame(_Serializable):
 		self.inline_message_id: Optional[str] = inline_message_id
 
 
+class KeyboardButton(_Serializable):
+	"""https://core.telegram.org/bots/api#keyboardbutton"""
+
+	def __init__(
+			self,
+			text: str,
+			request_contact: Optional[bool] = None,
+			request_location: Optional[bool] = None,
+			request_poll: Optional[str] = None,  # "quiz" or "regular"
+	):
+		self.text: str = text
+		self.request_contact: Optional[bool] = request_contact
+		self.request_location: Optional[bool] = request_location
+		self.request_poll: Optional[str] = request_poll
+
+	def serialize(self):
+		return _make_optional(_get_public(self))
+
+
 class InlineKeyboardButton(_Serializable):
 	"""https://core.telegram.org/bots/api#inlinekeyboardbutton"""
 
@@ -542,12 +561,12 @@ class ReplyKeyboardMarkup(_Serializable):
 
 	def __init__(
 			self,
-			keyboard: List[List[InlineKeyboardButton]],
+			keyboard: List[List[KeyboardButton]],
 			resize_keyboard: Optional[bool] = None,
 			one_time_keyboard: Optional[bool] = None,
 			selective: Optional[bool] = None,
 	):
-		self.keyboard: List[List[InlineKeyboardButton]] = keyboard
+		self.keyboard: List[List[KeyboardButton]] = keyboard
 		self.resize_keyboard: Optional[bool] = resize_keyboard
 		self.one_time_keyboard: Optional[bool] = one_time_keyboard
 		self.selective: Optional[bool] = selective
