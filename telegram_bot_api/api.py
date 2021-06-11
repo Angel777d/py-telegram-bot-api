@@ -1607,10 +1607,7 @@ class API:
 				self.buff.write(file.read())
 				self.buff.write(b'\r\n')
 
-		# print("[Req]", "\r\n...file data...\r\n", end="")
-
 		def _write_str(self, value: str):
-			# print("[Req]", value, end="")
 			self.buff.write(value.encode('utf-8'))
 
 		def get_data(self):

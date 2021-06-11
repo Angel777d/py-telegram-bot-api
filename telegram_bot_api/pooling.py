@@ -1,3 +1,4 @@
+import logging
 from threading import Thread
 from time import sleep
 from typing import Callable
@@ -32,7 +33,7 @@ class Pooling:
 		self.__isRunning = False
 
 	def __request_update(self):
-		# print("[Pooling] started")
+		logging.debug("[Pooling] started")
 		while self.__isRunning:
 			if self.__dev_mode:
 				self.__do_request()
@@ -40,12 +41,10 @@ class Pooling:
 				try:
 					self.__do_request()
 				except Exception as ex:
-					print("[Pooling] got exception", ex)
-					import traceback
-					traceback.print_exc()
+					logging.error("[Pooling] got exception", exc_info=ex)
 			sleep(self.__update_time)
 		self.__pooling = None
-		# print("[Pooling] stopped")
+		logging.debug("[Pooling] stopped")
 
 	def __do_request(self):
 		updates = self.__api.get_updates(offset=self.__lastUpdate)
